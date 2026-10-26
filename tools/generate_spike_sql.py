@@ -42,6 +42,25 @@ def generate() -> str:
         "INSERT INTO RequirementArguments (RequirementId,Name,Value) VALUES",
         "('WBL_SPIKE_CITY_ACTIVE_REQUIREMENT','PropertyName','WBL_SPIKE_CITY_ACTIVE'),",
         "('WBL_SPIKE_CITY_ACTIVE_REQUIREMENT','PropertyMinimum','1');",
+        "-- Candidate composition: player -> capital-city collection -> center-plot property.",
+        "INSERT INTO RequirementSets (RequirementSetId,RequirementSetType) VALUES",
+        "('WBL_SPIKE_PLAYER_ACTIVE_REQUIREMENTS','REQUIREMENTSET_TEST_ALL'),",
+        "('WBL_SPIKE_CAPITAL_FLAG_REQUIREMENTS','REQUIREMENTSET_TEST_ALL');",
+        "INSERT INTO Requirements (RequirementId,RequirementType) VALUES",
+        "('WBL_SPIKE_PLAYER_CAPITAL_ACTIVE','REQUIREMENT_COLLECTION_ANY_MET'),",
+        "('WBL_SPIKE_CAPITAL_FLAG_ACTIVE','REQUIREMENT_PLOT_PROPERTY_MATCHES');",
+        "INSERT INTO RequirementSetRequirements (RequirementSetId,RequirementId) VALUES",
+        "('WBL_SPIKE_PLAYER_ACTIVE_REQUIREMENTS','WBL_SPIKE_PLAYER_CAPITAL_ACTIVE'),",
+        "('WBL_SPIKE_CAPITAL_FLAG_REQUIREMENTS','WBL_SPIKE_CAPITAL_FLAG_ACTIVE');",
+        "INSERT INTO RequirementArguments (RequirementId,Name,Value) VALUES",
+        "('WBL_SPIKE_PLAYER_CAPITAL_ACTIVE','CollectionType','COLLECTION_PLAYER_CAPITAL_CITY'),",
+        "('WBL_SPIKE_PLAYER_CAPITAL_ACTIVE','RequirementSetId','WBL_SPIKE_CAPITAL_FLAG_REQUIREMENTS'),",
+        "('WBL_SPIKE_CAPITAL_FLAG_ACTIVE','PropertyName','WBL_SPIKE_PLAYER_ACTIVE'),",
+        "('WBL_SPIKE_CAPITAL_FLAG_ACTIVE','PropertyMinimum','1');",
+        "INSERT INTO Types (Type,Kind) VALUES",
+        "('WBL_MODIFIER_PLAYER_INTERNATIONAL_TRADE_PERCENT','KIND_MODIFIER');",
+        "INSERT INTO DynamicModifiers (ModifierType,CollectionType,EffectType) VALUES",
+        "('WBL_MODIFIER_PLAYER_INTERNATIONAL_TRADE_PERCENT','COLLECTION_OWNER','EFFECT_ADJUST_PLAYER_INTERNATIONAL_TRADE_ROUTE_YIELD_MODIFIER');",
     ]
     effects = (
         ("AMENITY", "MODIFIER_SINGLE_CITY_ADJUST_CITY_AMENITIES_FROM_GREAT_PEOPLE", "amenities", None),
@@ -66,6 +85,47 @@ def generate() -> str:
                         "INSERT INTO ModifierArguments (ModifierId,Name,Value) VALUES",
                         f"('{name}','YieldType','{yield_type}');",
                     ))
+    player_effects = (
+        ("AMENITY", "MODIFIER_PLAYER_CITIES_ADJUST_POLICY_AMENITY", "amenities", None),
+        ("PRODUCTION", "MODIFIER_PLAYER_CITIES_ADJUST_CITY_YIELD_MODIFIER", "productionPercent", "YIELD_PRODUCTION"),
+        ("SCIENCE", "MODIFIER_PLAYER_CITIES_ADJUST_CITY_YIELD_MODIFIER", "sciencePercent", "YIELD_SCIENCE"),
+        ("LOYALTY", "MODIFIER_PLAYER_CITIES_ADJUST_IDENTITY_PER_TURN", "loyalty", None),
+        ("TRADE", "WBL_MODIFIER_PLAYER_INTERNATIONAL_TRADE_PERCENT", "tradePercent",
+         "YIELD_PRODUCTION, YIELD_FOOD, YIELD_SCIENCE, YIELD_CULTURE, YIELD_GOLD, YIELD_FAITH"),
+    )
+    for tier in ("DEVELOPED", "DEVELOPING", "UNDERDEVELOPED"):
+        for stage in ("stage1", "stage2"):
+            for label, kind, field, yield_type in player_effects:
+                name = f"WBL_SPIKE_PLAYER_{tier}_{stage.upper()}_{label}"
+                amount = scaled(config.penalties[stage][field], config.tiers[tier].penaltyStrength)
+                amount_text = ", ".join([str(amount)] * 6) if label == "TRADE" else str(amount)
+                lines.extend((
+                    "INSERT INTO Modifiers (ModifierId,ModifierType,OwnerRequirementSetId) VALUES",
+                    f"('{name}','{kind}','WBL_SPIKE_PLAYER_ACTIVE_REQUIREMENTS');",
+                    "INSERT INTO ModifierArguments (ModifierId,Name,Value) VALUES",
+                    f"('{name}','Amount','{amount_text}');",
+                ))
+                if yield_type:
+                    lines.extend((
+                        "INSERT INTO ModifierArguments (ModifierId,Name,Value) VALUES",
+                        f"('{name}','YieldType','{yield_type}');",
+                    ))
+    for name, kind, amount, class_type in (
+        ("WBL_SPIKE_PLAYER_FAVOR_RATE", "MODIFIER_PLAYER_ADJUST_EXTRA_FAVOR_PER_TURN", config.spikes.favorDelta, None),
+        ("WBL_SPIKE_PLAYER_MERCHANT_RATE", "MODIFIER_PLAYER_ADJUST_GREAT_PERSON_POINTS",
+         config.investors.presidentMerchantPoints, "GREAT_PERSON_CLASS_MERCHANT"),
+    ):
+        lines.extend((
+            "INSERT INTO Modifiers (ModifierId,ModifierType,OwnerRequirementSetId) VALUES",
+            f"('{name}','{kind}','WBL_SPIKE_PLAYER_ACTIVE_REQUIREMENTS');",
+            "INSERT INTO ModifierArguments (ModifierId,Name,Value) VALUES",
+            f"('{name}','Amount','{amount}');",
+        ))
+        if class_type:
+            lines.extend((
+                "INSERT INTO ModifierArguments (ModifierId,Name,Value) VALUES",
+                f"('{name}','GreatPersonClassType','{class_type}');",
+            ))
     for name, kind, amount in (
         ("WBL_SPIKE_GRANT_FAVOR", "MODIFIER_PLAYER_ADD_FAVOR", config.spikes.favorDelta),
         ("WBL_SPIKE_GRANT_ENVOY", "MODIFIER_PLAYER_GRANT_INFLUENCE_TOKEN", config.spikes.envoyDelta),

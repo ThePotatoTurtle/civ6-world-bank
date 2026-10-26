@@ -73,6 +73,14 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(any("InventedAPI" in error for error in errors))
         self.assertTrue(any("125" in error for error in errors))
 
+    def test_deal_action_guard_normalizes_whitespace_and_rejects_binding(self):
+        for source in ("DealManager.SendWorkingDeal( DealProposalAction.INSPECT, 0, 1)",
+            "DealManager.SendWorkingDeal(\n DealProposalAction . INSPECT, 0, 1)"):
+            self.assertEqual(check_all.audit_deal_actions("Deals.lua", source), [])
+        for source in ("DealManager.SendWorkingDeal(DealProposalAction.ACCEPTED, 0, 1)",
+            "DealManager.SendWorkingDeal(action, 0, 1)"):
+            self.assertTrue(check_all.audit_deal_actions("Deals.lua", source))
+
     def test_comments_and_strings_do_not_look_like_engine_calls(self):
         source = '-- UI.Fake(99)\nlocal text="UI.Fake(99)"\n--[[ Game:SetProperty(4) ]]\nreturn true'
         self.assertEqual(check_all.engine_calls(source), set())
@@ -88,6 +96,18 @@ class PolicyTests(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertTrue(check_all.audit_gameplay("WBL_Dev/Scripts/WBL_Spikes.lua", source))
         self.assertFalse(check_all.audit_gameplay("WBL_Dev/Scripts/WBL_Spikes.lua", "GameEvents.OnGameTurnStarted.Add(OnTurn)\nfor _,v in ipairs(state) do end"))
+
+    def test_gameplay_include_graph_cannot_bypass_sync_rules(self):
+        import xml.etree.ElementTree as ET
+        with tempfile.TemporaryDirectory() as temp:
+            mod = Path(temp)
+            (mod / "Main.lua").write_text('include("Helper")')
+            (mod / "Helper.lua").write_text('Game.GetLocalPlayer(); math.random(); Events.TurnBegin.Add(Mutate)')
+            document = ET.fromstring('<Mod><InGameActions><AddGameplayScripts><File>Main.lua</File></AddGameplayScripts></InGameActions></Mod>')
+            modules = check_all.gameplay_modules(mod, [document])
+            self.assertIn((mod / "Helper.lua").resolve(), modules)
+            errors = [error for path in modules for error in check_all.audit_gameplay(path.name, path.read_text())]
+            self.assertEqual(len(errors), 3)
 
     def test_generated_copy_drift_fails(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -136,6 +156,10 @@ class UITests(unittest.TestCase):
         lua.execute('''
           print=function() end
           requests = {}; selected = {}; currentID = 0; status = nil
+          include=function() end
+          WBL_CONFIG={}
+          WBL_DEALS={Observe=function() end,Status=function() return 'S3 PENDING' end,IsBusy=function() return false end,
+            Arm=function() end,Update=function() end,OnStatement=function() end,Shutdown=function() end}
           function Control()
             local control = {callbacks={}}
             function control:SetHide(v) self.hidden=v end
@@ -156,7 +180,7 @@ class UITests(unittest.TestCase):
             event.Fire=function() for f in pairs(event.handlers) do f() end end
             return event
           end
-          Events={LoadGameViewStateDone=Event(), GameCoreEventPublishComplete=Event(), PlayerTurnActivated=Event()}
+          Events={LoadGameViewStateDone=Event(), GameCoreEventPublishComplete=Event(), PlayerTurnActivated=Event(), DiplomacyStatement=Event()}
           LuaEvents={LaunchBar_Resize=function(w) launchWidth=w end}
           Mouse={eLClick=1}; Keys={D=68,VK_ESCAPE=27}; KeyEvents={KeyUp=1}
           Game={GetLocalPlayer=function() return currentID end, GetProperty=function(_,key) assert(key=='WBL_SPIKE_STATUS'); return status end}
@@ -168,7 +192,7 @@ class UITests(unittest.TestCase):
           Players={[0]={GetCities=function() return cities end}}
           local target=Control()
           ContextPtr={SetHide=function(self,v) self.hidden=v end,
-            SetInputHandler=function(self,f) self.input=f end, SetShutdown=function(self,f) self.shutdown=f end,
+            SetInputHandler=function(self,f) self.input=f end, SetShutdown=function(self,f) self.shutdown=f end,SetUpdate=function(self,f) self.update=f end,
             LookUpControl=function(_,path) if haveStack then return target end end,
             BuildInstanceForControl=function(_,name,instance,stack) builds=(builds or 0)+1; instance.LaunchItemButton=Control(); instance.Pin=Control() end}
         ''')

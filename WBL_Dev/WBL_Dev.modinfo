@@ -21,6 +21,10 @@
     <ImportFiles id="WBL_DEV_Imports" criteria="WBL_DEV_XP2">
       <File>Scripts/WBL_Config.lua</File>
       <File>Scripts/WBL_Math.lua</File>
+      <File>Scripts/WBL_SpikeMilestones.lua</File>
+      <File>Scripts/WBL_SpikePlayerEffects.lua</File>
+      <File>Scripts/WBL_SpikeAI.lua</File>
+      <File>UI/WBL_Dev_Deals.lua</File>
     </ImportFiles>
     <AddGameplayScripts id="WBL_DEV_Gameplay" criteria="WBL_DEV_XP2">
       <File>Scripts/WBL_Spikes.lua</File>
@@ -31,16 +35,20 @@
     </AddUserInterfaces>
   </InGameActions>
   <LocalizedText>
-    <Text id="LOC_WBL_DEV_TITLE"><en_US>World Bank Loans Dev v0.0.0.1</en_US></Text>
+    <Text id="LOC_WBL_DEV_TITLE"><en_US>World Bank Loans Dev v0.0.0.2</en_US></Text>
     <Text id="LOC_WBL_DEV_TEASER"><en_US>World Bank Loans API spikes. New test games only.</en_US></Text>
-    <Text id="LOC_WBL_DEV_DESCRIPTION"><en_US>Version 0.0.0.1.[NEWLINE]World Bank Loans research tools. Open Bank on the launch bar or press Ctrl+Shift+D. Run All Spikes writes results to Lua.log. Requires Gathering Storm. Engine behavior and multiplayer remain unverified. Never enable this in a real game.</en_US></Text>
+    <Text id="LOC_WBL_DEV_DESCRIPTION"><en_US>Version 0.0.0.2.[NEWLINE]World Bank Loans research tools. Open Bank on the launch bar or press Ctrl+Shift+D. Run All Spikes writes results to Lua.log. AI deal inspections are nonbinding. Requires Gathering Storm. Engine behavior and multiplayer remain unverified. Never enable this in a real game.</en_US></Text>
   </LocalizedText>
   <Files>
     <File>Data/WBL_SpikeModifiers.sql</File>
     <File>Scripts/WBL_Config.lua</File>
     <File>Scripts/WBL_Math.lua</File>
+    <File>Scripts/WBL_SpikeMilestones.lua</File>
+    <File>Scripts/WBL_SpikePlayerEffects.lua</File>
+    <File>Scripts/WBL_SpikeAI.lua</File>
     <File>Scripts/WBL_Spikes.lua</File>
     <File>UI/WBL_Dev_Panel.xml</File>
     <File>UI/WBL_Dev_Panel.lua</File>
+    <File>UI/WBL_Dev_Deals.lua</File>
   </Files>
 </Mod>

@@ -11,6 +11,7 @@ INTERFACES.md
 TESTING_*.md
 TUNING.md
 PUBLIC_DOCS_DRAFT.md
+COMPLETION_AUDIT.md
 research/
 spike/
 .claude/
@@ -18,5 +19,6 @@ workshop/
 dist/
 generated/
 __pycache__/
+tools/vendor/
 *.py[cod]
 .pytest_cache/

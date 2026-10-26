@@ -163,11 +163,12 @@ def engine_calls(source: str) -> set[str]:
 def audit_lua(path: str, source: str, policy: dict) -> list[str]:
     errors = []
     rules = policy.get("apis", {}).get(path, {})
-    modules = policy.get("pure_modules", {}).get(path, {})
+    modules = policy.get("module_namespaces", policy.get("pure_modules", {})).get(path, {})
     for expression in sorted(engine_calls(source)):
         namespace = expression.split(".", 1)[0]
-        if ":" not in expression and namespace in modules and re.search(r"\blocal\s+" + re.escape(namespace) + r"\s*=\s*(?:\{|WBL_MATH\b)", masked_lua(source)):
-            continue
+        if ":" not in expression and namespace in modules:
+            if namespace.startswith("WBL_") or re.search(r"\blocal\s+" + re.escape(namespace) + r"\s*=\s*(?:\{|WBL_[A-Z_]+\b)", masked_lua(source)):
+                continue  # Local Lua module; its implementation is audited separately.
         evidence = rules.get(expression)
         if not evidence or not isinstance(evidence, str) or not re.search(r":\d+", evidence):
             errors.append(f"{path}: unverified API {expression}")
@@ -196,6 +197,33 @@ def audit_gameplay(path: str, source: str) -> list[str]:
     return errors
 
 
+def audit_deal_actions(path: str, source: str) -> list[str]:
+    errors = []
+    for argument in re.findall(r"\bDealManager\.SendWorkingDeal\s*\(\s*([^,)]+)", masked_lua(source)):
+        if re.sub(r"\s+", "", argument) != "DealProposalAction.INSPECT":
+            errors.append(f"{path}: only the nonbinding INSPECT action is permitted")
+    return errors
+
+
+def gameplay_modules(mod_dir: Path, documents: list) -> set[Path]:
+    """Trace local includes from gameplay entries; UI modules keep their own context."""
+    by_name = {path.stem: path.resolve() for path in mod_dir.rglob("*.lua")}
+    pending = [(mod_dir / safe_relative(item.text or "")).resolve()
+        for document in documents for item in document.findall("./InGameActions/AddGameplayScripts/File")]
+    found = set()
+    while pending:
+        path = pending.pop()
+        if path in found or not path.is_file():
+            continue
+        found.add(path)
+        source = path.read_text(encoding="utf-8-sig")
+        for name in re.findall(r'\binclude\s*\(\s*[\"\']([^\"\']+)[\"\']', source):
+            module = by_name.get(Path(name).stem)
+            if module is not None and module not in found:
+                pending.append(module)
+    return found
+
+
 def validate_sql(sql_path: Path, database: Path) -> list[str]:
     """Run generated rows against an in-memory clone, never the live database."""
     if not database.is_file():
@@ -204,6 +232,13 @@ def validate_sql(sql_path: Path, database: Path) -> list[str]:
         with sqlite3.connect(database.resolve().as_uri() + "?mode=ro", uri=True) as source:
             with sqlite3.connect(":memory:") as scratch:
                 source.backup(scratch)
+                # Civ VI supplies Make_Hash to its SQLite connection. Ordinary
+                # sqlite3 cannot verify those hashes; remove only hash-maintenance
+                # triggers in this disposable clone, never fabricate engine hashes.
+                for trigger in ("OnTypeInsert", "OnKindInsert"):
+                    row = scratch.execute("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?", (trigger,)).fetchone()
+                    if row and "Make_Hash" in row[0]:
+                        scratch.execute(f'DROP TRIGGER "{trigger}"')
                 scratch.execute("PRAGMA foreign_keys=ON")
                 baseline = set(scratch.execute("PRAGMA foreign_key_check"))
                 scratch.executescript(sql_path.read_text(encoding="utf-8-sig"))
@@ -247,12 +282,14 @@ def check_repo(root: Path = ROOT) -> list[str]:
         entries = set()
         if manifests:
             errors.extend(check_manifest(mod_dir))
+            documents = []
             for manifest in manifests:
                 try:
                     document = ET.parse(manifest).getroot()
-                    entries.update((mod_dir / safe_relative(item.text or "")).resolve() for item in document.findall("./InGameActions/AddGameplayScripts/File"))
+                    documents.append(document)
                 except (ValueError, ET.ParseError, OSError) as error:
                     errors.append(str(error))
+            entries = gameplay_modules(mod_dir, documents)
         for path in sorted(mod_dir.rglob("*.lua")):
             relative = path.relative_to(root).as_posix()
             source = path.read_text(encoding="utf-8-sig")
@@ -260,6 +297,8 @@ def check_repo(root: Path = ROOT) -> list[str]:
             if not valid:
                 errors.append(f"{relative}: Lua 5.1 syntax: {error}")
             errors.extend(audit_lua(relative, source, policy))
+            if path.name == "WBL_Dev_Deals.lua":
+                errors.extend(audit_deal_actions(relative, source))
             if path.resolve() in entries:
                 errors.extend(audit_gameplay(relative, source))
     errors.extend(sync(root, check=True))

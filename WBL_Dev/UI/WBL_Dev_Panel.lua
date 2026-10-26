@@ -1,4 +1,6 @@
--- Display and synced requests only. Local evidence: research/UI_TOOLING.md.
+-- Display, synced requests and dev-only nonbinding deal queries. Local evidence: research/.
+include("WBL_Config")
+include("WBL_Dev_Deals")
 local open = false
 local launch = nil
 local pin = nil
@@ -12,9 +14,11 @@ end
 
 local function Refresh()
   local status = Game:GetProperty(STATUS_PROPERTY)
+  WBL_DEALS.Observe(status, WBL_CONFIG)
+  Controls.DealsLabel:SetText(WBL_DEALS.Status())
   local canReload = IsSinglePlayer()
-  Controls.RunButton:SetDisabled(not canReload)
-  Controls.ReloadButton:SetDisabled(not canReload)
+  Controls.RunButton:SetDisabled(not canReload or WBL_DEALS.IsBusy())
+  Controls.ReloadButton:SetDisabled(not canReload or WBL_DEALS.IsBusy())
   Controls.ReloadButton:SetToolTipString(canReload
     and "Re-include the config and log status/version. Reading disk edits is UNVERIFIED."
     or "Reload Config is available only in single player.")
@@ -62,6 +66,11 @@ local function SendRequest(name)
   if not IsSinglePlayer() then
     print("[WBL UI] dev request blocked: single player only")
     return
+  end
+  if WBL_DEALS.IsBusy() then return end
+  if name == "WBL_RunAllSpikes" then
+    local status = Game:GetProperty(STATUS_PROPERTY)
+    WBL_DEALS.Arm(type(status) == "table" and status.runID or nil, WBL_CONFIG)
   end
   UI.RequestPlayerOperation(playerID, PlayerOperations.EXECUTE_SCRIPT, {OnStart = name})
   print("[WBL UI] request=" .. name .. " player=" .. tostring(playerID))
@@ -118,10 +127,20 @@ local function OnViewReady()
 end
 
 local function Shutdown()
+  WBL_DEALS.Shutdown()
+  Events.DiplomacyStatement.Remove(WBL_DEALS.OnStatement)
   Events.LoadGameViewStateDone.Remove(OnViewReady)
   Events.GameCoreEventPublishComplete.Remove(Refresh)
   Events.PlayerTurnActivated.Remove(Refresh)
   -- Built instances belong to this context; engine releases them with it.
+end
+
+local function OnUpdate(deltaSeconds)
+  WBL_DEALS.Update(deltaSeconds)
+  Controls.DealsLabel:SetText(WBL_DEALS.Status())
+  local disabled = not IsSinglePlayer() or WBL_DEALS.IsBusy()
+  Controls.RunButton:SetDisabled(disabled)
+  Controls.ReloadButton:SetDisabled(disabled)
 end
 
 ContextPtr:SetHide(false)
@@ -129,6 +148,7 @@ Controls.Main:SetHide(true)
 Controls.FallbackButton:SetHide(false)
 ContextPtr:SetInputHandler(OnInput, true)
 ContextPtr:SetShutdown(Shutdown)
+ContextPtr:SetUpdate(OnUpdate)
 Controls.CloseButton:RegisterCallback(Mouse.eLClick, function() SetOpen(false) end)
 Controls.FallbackButton:RegisterCallback(Mouse.eLClick, Toggle)
 Controls.RunButton:RegisterCallback(Mouse.eLClick, function() SendRequest("WBL_RunAllSpikes") end)
@@ -136,5 +156,6 @@ Controls.ReloadButton:RegisterCallback(Mouse.eLClick, function() SendRequest("WB
 Events.LoadGameViewStateDone.Add(OnViewReady)
 Events.GameCoreEventPublishComplete.Add(Refresh)
 Events.PlayerTurnActivated.Add(Refresh)
+Events.DiplomacyStatement.Add(WBL_DEALS.OnStatement)
 Refresh()
 print("[WBL UI] ready; Ctrl+Shift+D; S7 PENDING")

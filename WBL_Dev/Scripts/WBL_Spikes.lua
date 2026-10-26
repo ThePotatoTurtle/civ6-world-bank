@@ -2,17 +2,13 @@
 -- Every mutation runs from a synchronized GameEvents handler and refuses multiplayer.
 include("WBL_Config");
 include("WBL_Math");
+include("WBL_SpikePlayerEffects");
+include("WBL_SpikeMilestones");
+include("WBL_SpikeAI");
 
 local RUN_KEY = "WBL_SPIKE_RUN";
 local STATUS_KEY = "WBL_SPIKE_STATUS";
-local ATTACHED_KEY = "WBL_SPIKE_ATTACHED_CITIES";
 local FLAG_KEY = "WBL_SPIKE_CITY_ACTIVE";
-local MODIFIERS = {
-  "WBL_SPIKE_DEVELOPED_STAGE2_AMENITY",
-  "WBL_SPIKE_DEVELOPED_STAGE2_PRODUCTION",
-  "WBL_SPIKE_DEVELOPED_STAGE2_SCIENCE",
-  "WBL_SPIKE_DEVELOPED_STAGE2_LOYALTY"
-};
 
 local function Read(fn)
   local ok, value = pcall(fn);
@@ -37,10 +33,14 @@ local function ValidConfig(config)
       return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge;
     end
     assert(type(config) == "table" and type(config.spikes) == "table", "missing_spike_config");
-    for _, name in ipairs({ "goldDelta", "goldSafetyReserve", "aiGrant", "favorDelta", "envoyDelta", "epsilon" }) do
+    assert(type(config.spikes.comparisonGold) == "table" and #config.spikes.comparisonGold > 0, "missing_comparison_gold");
+    for _, amount in ipairs(config.spikes.comparisonGold) do
+      assert(finite(amount) and amount > 0, "invalid_comparison_gold");
+    end
+    for _, name in ipairs({ "goldDelta", "goldSafetyReserve", "aiGrant", "favorDelta", "envoyDelta", "eraScoreDelta", "merchantPointsDelta", "populationDelta", "epsilon" }) do
       assert(finite(config.spikes[name]) and config.spikes[name] >= 0, "invalid_" .. name);
     end
-    for _, name in ipairs({ "logEveryTurns", "difficultyLogEveryTurns", "observationTurns", "standardAutoplayTurns", "onlineAutoplayTurns" }) do
+    for _, name in ipairs({ "logEveryTurns", "difficultyLogEveryTurns", "observationTurns", "standardAutoplayTurns", "onlineAutoplayTurns", "milestoneObservationTurns" }) do
       local value = config.spikes[name];
       assert(finite(value) and value > 0 and value % 1 == 0, "invalid_" .. name);
     end
@@ -53,6 +53,8 @@ local function ValidConfig(config)
     end
     assert(config.growth.standardMin <= config.growth.standardMax, "inverted_growth_bounds");
     assert(type(WBL_MATH) == "table", "math_module_missing");
+    assert(type(WBL_SPIKE_PLAYER_EFFECTS) == "table" and type(WBL_SPIKE_MILESTONES) == "table" and type(WBL_SPIKE_AI) == "table", "probe_helpers_missing");
+    assert(finite(config.investors.presidentMerchantPoints) and config.investors.presidentMerchantPoints >= 0, "invalid_merchant_rate");
     for _, tierName in ipairs({ "DEVELOPED", "DEVELOPING", "UNDERDEVELOPED" }) do
       local tier = config.tiers[tierName];
       assert(finite(tier.valueRatio) and tier.valueRatio > 0, "invalid_tier_value");
@@ -179,31 +181,6 @@ local function GoldRoundTrip(run, player)
   if not ok then Log(run, "S1", "engine_error", err, "no_error", "FAIL"); end
 end
 
-local function CitySnapshot(city)
-  local snapshot = { cityID = city:GetID(), population = city:GetPopulation() };
-  snapshot.amenities = Read(function() local growth = city:GetGrowth(); return growth:GetAmenities(); end);
-  snapshot.loyalty = Read(function() local identity = city:GetCulturalIdentity(); return identity:GetLoyaltyPerTurn(); end);
-  snapshot.production = Read(function() return city:GetYield(YieldTypes.PRODUCTION); end);
-  snapshot.science = Read(function() return city:GetYield(YieldTypes.SCIENCE); end);
-  snapshot.productionTooltip = Read(function() return city:GetYieldToolTip(YieldTypes.PRODUCTION); end);
-  snapshot.scienceTooltip = Read(function() return city:GetYieldToolTip(YieldTypes.SCIENCE); end);
-  return snapshot;
-end
-
-local function CityRaw(run, phase, snapshot)
-  local p = WBL_CONFIG.penalties.stage2;
-  Log(run, "S4", phase .. "_city_" .. snapshot.cityID,
-    "amenities:" .. Text(snapshot.amenities) .. ",production:" .. Text(snapshot.production) ..
-    ",science:" .. Text(snapshot.science) .. ",loyalty:" .. Text(snapshot.loyalty),
-    "candidate_developed_stage2_amenities:" .. p.amenities ..
-    ",productionPercent:" .. p.productionPercent .. ",sciencePercent:" .. p.sciencePercent ..
-    ",loyalty:" .. p.loyalty, "RAW");
-  Log(run, "S4", phase .. "_production_breakdown", snapshot.productionTooltip,
-    "negative_modifier_while_applied_and_absent_after_remove", "RAW");
-  Log(run, "S4", phase .. "_science_breakdown", snapshot.scienceTooltip,
-    "negative_modifier_while_applied_and_absent_after_remove", "RAW");
-end
-
 local function CandidateCity(run)
   if run.cityID == nil then return nil; end
   local player = Players[run.playerID];
@@ -214,7 +191,14 @@ local function CandidateCity(run)
   return nil;
 end
 
+local function ProbeLog(run)
+  return function(spike, variant, actual, expected, result, detail)
+    Log(run, spike, variant, actual, expected, result, detail);
+  end;
+end
+
 local function ClearFlag(run)
+  if run.effects then return WBL_SPIKE_PLAYER_EFFECTS.Clear(run.effects, ProbeLog(run)); end
   if run.plotIndex == nil then return true; end
   local ok, err = pcall(function()
     local plot = Map.GetPlotByIndex(run.plotIndex);
@@ -226,141 +210,49 @@ local function ClearFlag(run)
 end
 
 local function StartCityCandidate(run, player)
-  local city = Cities(player)[1];
-  if city == nil then
-    -- A new game still has a settler. Create one disposable fixture city through the
-    -- shipped Pirates gameplay API, checking the engine's own location predicate.
-    local collection = player:GetCities();
-    local start = player:GetStartingPlot();
-    local function CreateAt(plot)
-      if plot and collection:IsValidFoundLocation(plot:GetX(), plot:GetY()) then
-        return collection:Create(plot:GetX(), plot:GetY());
-      end
-      return nil;
-    end
-    city = CreateAt(start);
-    if city == nil then
-      for index = 0, Map.GetPlotCount() - 1 do
-        city = CreateAt(Map.GetPlotByIndex(index));
-        if city ~= nil then break; end
-      end
-    end
-    Log(run, "S4", "fixture_city", city and city:GetID() or "none", "engine_valid_created_city",
-      city and "PASS" or "PENDING", "disposable_dev_game_city_gift_settler_not_deleted");
-  end
-  if city == nil then
-    Log(run, "S4", "candidate", "no_city", "founded_city", "PENDING");
-    return;
-  end
-  run.cityID = city:GetID();
-  local plot = city:GetPlot();
-  run.plotIndex = plot:GetIndex();
-  plot:SetProperty(FLAG_KEY, 0);
-  local attached = Game:GetProperty(ATTACHED_KEY) or {};
-  local key = tostring(run.playerID) .. ":" .. tostring(run.cityID) .. ":" .. tostring(run.plotIndex);
-  -- Mark each completed attachment so an error or a repeated run cannot stack successful effects.
-  local done = attached[key] or {};
-  for i, modifier in ipairs(MODIFIERS) do
-    if not done[i] then
-      city:AttachModifierByID(modifier);
-      done[i] = true;
-      attached[key] = done;
-      Game:SetProperty(ATTACHED_KEY, attached);
+  run.effects = WBL_SPIKE_PLAYER_EFFECTS.Prepare(player, WBL_CONFIG, ProbeLog(run));
+  for _, case in ipairs(run.effects.cases) do
+    if case.mode == "player" then
+      run.cityID = case.cityID;
+      run.plotIndex = case.plotIndex;
     end
   end
-  run.s4Control = CitySnapshot(city);
-  CityRaw(run, "control", run.s4Control);
-  plot:SetProperty(FLAG_KEY, 1);
-  run.s4Immediate = CitySnapshot(city);
-  CityRaw(run, "apply_immediate", run.s4Immediate);
-  Log(run, "S4", "candidate_gate", "city_owner_plot_resolution_unverified",
-    "apply_and_remove_all_four_effects", "PENDING");
 end
 
 local function Milestones(run, player)
-  for _, city in ipairs(Cities(player)) do
-    Log(run, "S6", "city_" .. city:GetID() .. "_population", city:GetPopulation(),
-      "nonnegative_population_read", "RAW");
-  end
-  local result, err = Read(function()
-    local result = {};
-    local districts = player:GetDistricts();
-    for _, district in districts:Members() do
-      result[#result + 1] = { districtType = district:GetType(), complete = district:IsComplete() };
-    end
-    table.sort(result, function(a, b) return a.districtType < b.districtType; end);
-    return result;
-  end);
-  if result == nil then
-    Log(run, "S6", "district_read", err, "gameplay_read_supported", "PENDING");
-  else
-    for _, district in ipairs(result) do
-      Log(run, "S6", "district_" .. district.districtType, district.complete,
-        "completion_state_only_no_new_target_completion_claimed", "RAW");
-    end
-  end
-  Log(run, "S6", "transitions", "read_snapshots_only", "new_completed_target_transition", "PENDING");
+  run.milestones = WBL_SPIKE_MILESTONES.Run(player, CandidateCity(run), WBL_CONFIG, ProbeLog(run));
 end
 
 local function PendingPlayerPerks(run, player)
-  local favor = Read(function() return player:GetFavor(); end);
-  local favorRate = Read(function() return player:GetFavorPerTurn(); end);
-  local score = Read(function() local eras = Game.GetEras(); return eras:GetPlayerCurrentScore(run.playerID); end);
-  Log(run, "S4", "favor_and_era_read", "favor:" .. Text(favor) ..
-    ",favorRate:" .. Text(favorRate) .. ",eraScore:" .. Text(score),
-    "read_capability_only_writers_unverified", "RAW");
-  Log(run, "S4", "player_effects", "no_source_backed_reversible_player_gate_or_era_writer",
-    "favor_floor_era_grant_international_route_percent", "PENDING");
-  local envoy = Read(function() local influence = player:GetInfluence(); return influence:GetTokensToGive(); end);
-  local merchant = Read(function()
-    local points = player:GetGreatPeoplePoints();
-    return points:GetPointsTotal(GameInfo.GreatPersonClasses["GREAT_PERSON_CLASS_MERCHANT"].Index);
-  end);
-  Log(run, "S9", "perk_read", "envoys:" .. Text(envoy) .. ",merchantPoints:" .. Text(merchant),
-    "read_capability_only", "RAW");
-  Log(run, "S9", "perk_write", "data_grant_candidates_only_removal_repeat_semantics_unverified",
-    "timed_envoy_and_reversible_merchant_points", "PENDING");
+  Log(run, "S4", "player_effects", "capital_collection_chain_candidate",
+    "ordinary_context_gate_arithmetic_and_full_route_scope", "PENDING");
+  Log(run, "S4", "tier_stage_coverage", "developed_stage2_short_fixture_only",
+    "all_tier_stage_amounts_and_new_captured_city_coverage", "PENDING");
+  Log(run, "S4", "international_route_scope", "fresh_game_has_no_controlled_route",
+    "actual_own_international_route_yield_breakdown", "PENDING");
+  Log(run, "S9", "perk_write", "source_backed_direct_candidates",
+    "ordinary_context_timing_save_and_MP_proof", "PENDING");
 end
 
 local function OneShotGrants(run, player)
-  local completed = Game:GetProperty("WBL_SPIKE_GRANTS_DONE") or {};
-  local actorKey = tostring(run.playerID);
-  local actorDone = completed[actorKey] or {};
-  local candidates = {
-    { label = "favor", spike = "S4", modifier = "WBL_SPIKE_GRANT_FAVOR",
-      delta = WBL_CONFIG.spikes.favorDelta,
-      read = function() return player:GetFavor(); end },
-    { label = "envoy", spike = "S9", modifier = "WBL_SPIKE_GRANT_ENVOY",
-      delta = WBL_CONFIG.spikes.envoyDelta,
-      read = function() local influence = player:GetInfluence(); return influence:GetTokensToGive(); end }
-  };
-  for i, candidate in ipairs(candidates) do
-    if not actorDone[i] then
-      local before, readError = Read(candidate.read);
-      if type(before) == "number" then
-        local ok, attachError = pcall(function() player:AttachModifierByID(candidate.modifier); end);
-        if ok then
-          -- These positive fixture gifts intentionally remain in the disposable dev game.
-          actorDone[i] = true;
-          completed[actorKey] = actorDone;
-          Game:SetProperty("WBL_SPIKE_GRANTS_DONE", completed);
-          local after = Read(candidate.read);
-          Log(run, candidate.spike, "one_shot_" .. candidate.label, after, before + candidate.delta,
-            Near(after, before + candidate.delta) and "PASS" or "PENDING",
-            "positive_fixture_grant_only_negative_and_repeat_semantics_unverified");
-        else
-          Log(run, candidate.spike, "one_shot_" .. candidate.label, attachError,
-            "source_backed_data_effect_attaches", "PENDING");
-        end
-      else
-        Log(run, candidate.spike, "one_shot_" .. candidate.label, readError,
-          "gameplay_read_available_before_grant", "PENDING");
-      end
-    else
-      Log(run, candidate.spike, "one_shot_" .. candidate.label, "already_attempted_this_game",
-        "no_duplicate_fixture_grant", "RAW");
-    end
+  WBL_SPIKE_PLAYER_EFFECTS.DirectGrants(player, WBL_CONFIG, ProbeLog(run));
+end
+
+local function PrepareDealCash(run, player)
+  local maximum = 0;
+  for _, amount in ipairs(WBL_CONFIG.spikes.comparisonGold) do maximum = math.max(maximum, amount); end
+  local treasury = player:GetTreasury();
+  local before = treasury:GetGoldBalance();
+  if type(before) ~= "number" or before ~= before or before < 0 or before == math.huge then
+    Log(run, "S3", "fixture_cash", before, "finite_nonnegative_baseline", "PENDING");
+    return;
   end
+  local credit = math.max(0, maximum - before);
+  local ok, err = pcall(function() treasury:ChangeGoldBalance(credit); end);
+  local after = treasury:GetGoldBalance();
+  Log(run, "S3", "fixture_cash", "before:" .. before .. ",credit:" .. credit .. ",after:" .. Text(after),
+    "at_least_maximum_comparison_gold:" .. maximum,
+    ok and type(after) == "number" and after >= maximum and "RAW" or "PENDING", err);
 end
 
 local function Relationships(run)
@@ -459,15 +351,7 @@ local function ObserveEconomy(run, turn)
   else
     Log(run, "S11", "growth", average, "positive_complete_world_index", "PENDING");
   end
-  if run.aiID ~= nil then
-    for _, snapshot in ipairs(snapshots) do
-      if snapshot.playerID == run.aiID then
-        Log(run, "S8", "granted_ai_observation_" .. run.aiID,
-          "gold:" .. snapshot.gold .. ",netGPT:" .. snapshot.gpt ..
-          ",elapsed:" .. (turn - run.startTurn), "raw_no_purchase_attribution", "RAW");
-      end
-    end
-  end
+
 end
 
 local function Finish(run)
@@ -517,6 +401,7 @@ function WBL_RunAllSpikes(ePlayer, params)
   Publish(run, "RUNNING", "Running source-backed probes; unresolved checks stay pending.");
   local ok, err = pcall(function()
     GoldRoundTrip(run, player);
+    PrepareDealCash(run, player);
     for _, major in ipairs(Majors()) do
       local development = Development(major);
       Log(run, "S2", "development_player_" .. major:GetID(),
@@ -533,28 +418,18 @@ function WBL_RunAllSpikes(ePlayer, params)
     Log(run, "S7", "launch_bar", "request_reached_gameplay", "visible_working_launch_bar_entry_LOOK", "PENDING");
     StartCityCandidate(run, player);
     Milestones(run, player);
+    WBL_SPIKE_PLAYER_EFFECTS.Capture(run.effects, "control", WBL_CONFIG, ProbeLog(run));
+    WBL_SPIKE_PLAYER_EFFECTS.Apply(run.effects, ProbeLog(run));
+    WBL_SPIKE_PLAYER_EFFECTS.Capture(run.effects, "apply_immediate", WBL_CONFIG, ProbeLog(run));
     PendingPlayerPerks(run, player);
     OneShotGrants(run, player);
-    Log(run, "S3", "deal_rate", "no_safe_automated_acceptability_probe",
-      "AI_accepted_gold_for_30_turn_GPT_raw_matrix", "PENDING");
+    WBL_SPIKE_PLAYER_EFFECTS.EstablishContact(player, ProbeLog(run));
+    Log(run, "S3", "deal_rate", "UI_matrix_observation_separate",
+      "AI_gold_GPT_acceptability_samples_from_UI_probe", "PENDING");
     Log(run, "S5", "damage_attribution", "aggregate_history_only",
       "damaged_city_owner_at_synced_boundary", "PENDING");
     DisasterHistory(run, turn);
-    for _, major in ipairs(Majors()) do
-      if not major:IsHuman() then
-        local treasury = major:GetTreasury();
-        run.aiID = major:GetID();
-        run.aiGoldBefore = treasury:GetGoldBalance();
-        treasury:ChangeGoldBalance(WBL_CONFIG.spikes.aiGrant);
-        run.aiGoldAfter = treasury:GetGoldBalance();
-        Log(run, "S8", "script_grant_ai_" .. run.aiID, run.aiGoldAfter,
-          run.aiGoldBefore + WBL_CONFIG.spikes.aiGrant,
-          Near(run.aiGoldAfter, run.aiGoldBefore + WBL_CONFIG.spikes.aiGrant) and "PASS" or "FAIL");
-        break;
-      end
-    end
-    Log(run, "S8", "spending", run.aiID and "observing_granted_AI" or "no_AI_present",
-      "controlled_purchase_spend_attribution", "PENDING");
+    run.aiProbe = WBL_SPIKE_AI.Run(Majors(), WBL_CONFIG, ProbeLog(run));
     ObserveEconomy(run, turn);
     Log(run, "S11", "growth_tuning", "telemetry_started", "representative_speed_histories", "PENDING");
     Log(run, "S12", "difficulty_tuning", "telemetry_started", "representative_difficulty_histories", "PENDING");
@@ -608,22 +483,28 @@ local function OnGameTurnStarted(turn)
     local elapsed = now - run.startTurn;
     local horizon = run.speedType == "GAMESPEED_ONLINE" and WBL_CONFIG.spikes.onlineAutoplayTurns or WBL_CONFIG.spikes.standardAutoplayTurns;
     if elapsed > horizon and run.summaryPrinted then return; end
-    if elapsed <= horizon then ObserveEconomy(run, now); end
+    if elapsed <= horizon then
+      ObserveEconomy(run, now);
+      if run.aiProbe then run.aiProbe = WBL_SPIKE_AI.Observe(Majors(), run.aiProbe, WBL_CONFIG, ProbeLog(run)); end
+    end
     Relationships(run);
     DisasterHistory(run, now - 1);
-    if elapsed == 1 and run.plotIndex ~= nil then
-      local city = CandidateCity(run);
-      if city then CityRaw(run, "applied_boundary", CitySnapshot(city)); end
+    if run.milestones and not run.milestones.completed then
+      run.milestones = WBL_SPIKE_MILESTONES.Observe(Players[run.playerID], CandidateCity(run), run.milestones, WBL_CONFIG, ProbeLog(run));
+    end
+    if elapsed == 1 and run.effects ~= nil then
+      WBL_SPIKE_PLAYER_EFFECTS.Capture(run.effects, "applied_boundary", WBL_CONFIG, ProbeLog(run));
       Publish(run, "S4_APPLIED", "Candidate city effects active. Inspect the selected city breakdowns, then end turn once to remove.");
     elseif elapsed >= WBL_CONFIG.spikes.observationTurns and not run.summaryPrinted then
-      local city = CandidateCity(run);
-      if city then CityRaw(run, "before_remove", CitySnapshot(city)); end
-      ClearFlag(run);
-      if city then CityRaw(run, "remove_immediate", CitySnapshot(city)); end
+      if run.effects then WBL_SPIKE_PLAYER_EFFECTS.Capture(run.effects, "before_remove", WBL_CONFIG, ProbeLog(run)); end
+      local cleared = ClearFlag(run);
+      if run.effects then WBL_SPIKE_PLAYER_EFFECTS.Capture(run.effects, "remove_immediate", WBL_CONFIG, ProbeLog(run)); end
       Log(run, "S4", "release_gate", "candidate_raw_results_require_review",
         "all_effects_apply_remove_all_tiers_and_player_perks", "PENDING");
       Finish(run);
-      Publish(run, "S4_REMOVED", "Candidate flag removed. Logs contain raw effect and AI observations; production gates remain pending.");
+      Publish(run, cleared and "S4_REMOVED" or "ERROR", cleared and
+        "Candidate flags removed. Logs contain raw effect and AI observations; production gates remain pending." or
+        "Candidate flag cleanup failed. Inspect the FAIL log; do not treat effects as removed.");
     else
       Game:SetProperty(RUN_KEY, run);
     end

@@ -2,7 +2,7 @@
 -- The standalone dev mod receives an identical generated copy of this file.
 WBL_CONFIG = {
   version = "0.0.0", -- Production semantic version; no playable release exists yet.
-  devVersion = "0.0.0.1", -- Dev version targeting the production version above.
+  devVersion = "0.0.0.2", -- Dev version targeting the production version above.
   growth = {
     standardDefault = 0.035, -- Growth fraction per Standard turn; proposed until S11.
     standardMin = 0.005, -- Minimum growth fraction per Standard turn; proposed until S11.
@@ -151,12 +151,16 @@ WBL_CONFIG = {
     dealTurns = 30, -- Deal duration in S3 proposals; actual engine duration must be logged.
     dealGPTMin = 1, -- Minimum proposed GPT in S3 search.
     dealGPTMax = 100, -- Maximum proposed GPT in S3 search.
+    dealQueryTimeoutSeconds = 8, -- Seconds allowed for one nonbinding S3 inspection response.
+    dealRunTimeoutSeconds = 120, -- Seconds allowed for the complete serialized S3 inspection matrix.
     minAttitudeSamples = 3, -- Requested attitude samples; report incomplete if absent.
     favorDelta = 1, -- Favor change in S4 fixture.
     eraScoreDelta = 1, -- Era Score change in S4 fixture.
     merchantPointsDelta = 1, -- Great Merchant points change in S9 fixture.
     envoyDelta = 1, -- Envoy change in S9 fixture.
     observationTurns = 2, -- Early S8 observation checkpoint; not sufficient to prove causation.
+    populationDelta = 1, -- Positive population increase in the disposable S6 fixture.
+    milestoneObservationTurns = 1, -- Synced boundary observations before S6 fixture recheck.
     logEveryTurns = 1, -- Growth log interval in turns.
     difficultyLogEveryTurns = 10, -- S12 score log interval in turns.
     standardAutoplayTurns = 100, -- Minimum Standard S11 observation turns.
