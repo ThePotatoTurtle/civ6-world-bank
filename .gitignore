@@ -22,3 +22,5 @@ __pycache__/
 tools/vendor/
 *.py[cod]
 .pytest_cache/
+tests/
+tools/
