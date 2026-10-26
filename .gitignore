@@ -1,0 +1,22 @@
+# Internal project material
+World_Bank_spec.md
+CIV6_MODDING_PLAYBOOK.md
+PLAN*.md
+SPIKES*.md
+SPIKE_SESSION.md
+DECISIONS.md
+FUTURE.md
+FIXPLAN_*.md
+INTERFACES.md
+TESTING_*.md
+TUNING.md
+PUBLIC_DOCS_DRAFT.md
+research/
+spike/
+.claude/
+workshop/
+dist/
+generated/
+__pycache__/
+*.py[cod]
+.pytest_cache/

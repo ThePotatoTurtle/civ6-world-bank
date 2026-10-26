@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shape: installed EFV_Dev/UI/EFV_Dev_Panel.xml:5-63; research/UI_TOOLING.md. -->
+<Context Name="WBL_Dev_Panel">
+  <GridButton ID="FallbackButton" Anchor="L,T" Offset="12,112" Size="130,32" Style="MainButton" String="World Bank Dev" ToolTip="World Bank Loans spike panel (Ctrl+Shift+D)"/>
+  <Container ID="Main" Anchor="C,C" Size="600,440" Hidden="1" ConsumeMouse="1">
+    <Grid Anchor="C,C" Size="600,440" Style="WindowFrameTitle">
+      <Label ID="TitleLabel" Anchor="C,T" Offset="0,12" Style="WindowHeader" String="World Bank Loans: Spikes"/>
+      <Button ID="CloseButton" Anchor="R,T" Offset="-8,-5" Style="CloseButtonLarge"/>
+      <Stack ID="MainStack" Anchor="L,T" Offset="22,52" StackGrowth="Bottom" StackPadding="12">
+        <Label Anchor="L,T" Style="BodyTextDark16" WrapWidth="556" String="New test game only. Results go to Lua.log."/>
+        <Label ID="EntryLabel" Anchor="L,T" Style="BodyTextDark14" WrapWidth="556" String="Launch bar: PENDING visual check. Ctrl+Shift+D opens this panel."/>
+        <GridButton ID="RunButton" Size="260,41" Style="MainButton" String="Run All Spikes"/>
+        <GridButton ID="ReloadButton" Size="260,41" Style="MainButton" String="Reload Config (single player)"/>
+        <Label ID="ReloadLabel" Anchor="L,T" Style="BodyTextDark14" WrapWidth="556" String="Fresh file reload is UNVERIFIED. The log records include status and version."/>
+        <Label ID="StatusLabel" Anchor="L,T" Style="BodyTextDark14" WrapWidth="556" String="PENDING: gameplay status has not arrived."/>
+        <Label ID="CountsLabel" Anchor="L,T" Style="BodyTextDark14" WrapWidth="556" String="Offline checks do not prove engine behavior."/>
+      </Stack>
+    </Grid>
+  </Container>
+  <Instance Name="WBL_Dev_LaunchItem">
+    <Button ID="LaunchItemButton" Anchor="L,C" Size="49,49" Texture="LaunchBar_Hook_GreatPeopleButton" Style="ButtonNormalText" TextureOffset="0,-1" StateOffsetIncrement="0,49" ToolTip="World Bank Loans spike panel (Ctrl+Shift+D)">
+      <Label Anchor="C,C" Offset="0,1" Style="FontNormal10" Color="255,230,160,255" String="Bank"/>
+    </Button>
+  </Instance>
+  <Instance Name="WBL_Dev_LaunchPin">
+    <Image ID="Pin" Anchor="L,C" Offset="0,-2" Size="7,7" Texture="LaunchBar_TrackPip" Color="255,255,255,200"/>
+  </Instance>
+</Context>

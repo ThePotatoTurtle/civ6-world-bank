@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Mod id="32999527-94bd-4e64-b7cb-66329ffaf673" version="1">
+  <Properties>
+    <Name>LOC_WBL_DEV_TITLE</Name>
+    <Teaser>LOC_WBL_DEV_TEASER</Teaser>
+    <Description>LOC_WBL_DEV_DESCRIPTION</Description>
+    <Authors>ThePotatoTurtle</Authors>
+    <AffectsSavedGames>1</AffectsSavedGames>
+    <CompatibleVersions>2.0</CompatibleVersions>
+  </Properties>
+  <Dependencies>
+    <Mod id="4873eb62-8ccc-4574-b784-dda455e74e68" title="Expansion: Gathering Storm"/>
+  </Dependencies>
+  <ActionCriteria>
+    <Criteria id="WBL_DEV_XP2"><GameCoreInUse>Expansion2</GameCoreInUse></Criteria>
+  </ActionCriteria>
+  <InGameActions>
+    <UpdateDatabase id="WBL_DEV_Data" criteria="WBL_DEV_XP2">
+      <File>Data/WBL_SpikeModifiers.sql</File>
+    </UpdateDatabase>
+    <ImportFiles id="WBL_DEV_Imports" criteria="WBL_DEV_XP2">
+      <File>Scripts/WBL_Config.lua</File>
+      <File>Scripts/WBL_Math.lua</File>
+    </ImportFiles>
+    <AddGameplayScripts id="WBL_DEV_Gameplay" criteria="WBL_DEV_XP2">
+      <File>Scripts/WBL_Spikes.lua</File>
+    </AddGameplayScripts>
+    <AddUserInterfaces id="WBL_DEV_UI" criteria="WBL_DEV_XP2">
+      <Properties><Context>InGame</Context></Properties>
+      <File>UI/WBL_Dev_Panel.xml</File>
+    </AddUserInterfaces>
+  </InGameActions>
+  <LocalizedText>
+    <Text id="LOC_WBL_DEV_TITLE"><en_US>World Bank Loans Dev v0.0.0.1</en_US></Text>
+    <Text id="LOC_WBL_DEV_TEASER"><en_US>World Bank Loans API spikes. New test games only.</en_US></Text>
+    <Text id="LOC_WBL_DEV_DESCRIPTION"><en_US>Version 0.0.0.1.[NEWLINE]World Bank Loans research tools. Open Bank on the launch bar or press Ctrl+Shift+D. Run All Spikes writes results to Lua.log. Requires Gathering Storm. Engine behavior and multiplayer remain unverified. Never enable this in a real game.</en_US></Text>
+  </LocalizedText>
+  <Files>
+    <File>Data/WBL_SpikeModifiers.sql</File>
+    <File>Scripts/WBL_Config.lua</File>
+    <File>Scripts/WBL_Math.lua</File>
+    <File>Scripts/WBL_Spikes.lua</File>
+    <File>UI/WBL_Dev_Panel.xml</File>
+    <File>UI/WBL_Dev_Panel.lua</File>
+  </Files>
+</Mod>
