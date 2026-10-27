@@ -259,6 +259,20 @@ function M.RatingPromotionEligible(closureKind, everMissedPayment)
   return closureKind == "MATURITY" and not everMissedPayment
 end
 
+-- Pure policy for an authoritative D rating, using aggregates across ALL loans.
+-- Arrears-only clearance can end default penalties while D still blocks credit.
+-- A D-to-C recovery consumes this closure event; do not also award a promotion.
+function M.RatingRecoveryEligible(snapshot)
+  assert(type(snapshot) == "table", "rating recovery requires an all-loans balance snapshot")
+  requireNonnegative(snapshot.scheduledPrincipal, "scheduledPrincipal")
+  requireNonnegative(snapshot.overduePrincipal, "overduePrincipal")
+  requireNonnegative(snapshot.futureInterest, "futureInterest")
+  requireNonnegative(snapshot.overdueInterest, "overdueInterest")
+  requireNonnegative(snapshot.arrearsFees, "arrearsFees")
+  return snapshot.scheduledPrincipal == 0 and snapshot.overduePrincipal == 0
+    and snapshot.futureInterest == 0 and snapshot.overdueInterest == 0 and snapshot.arrearsFees == 0
+end
+
 function M.RecoveryClaimWindow(scale, config)
   local c = configOrDefault(config)
   return M.ScaleTurns(c.disasterRecovery.claimWindowTurns, scale)
@@ -269,6 +283,19 @@ function M.RecoveryPrincipalCap(normalRemainingCredit, pool)
   requireNonnegative(normalRemainingCredit, "normalRemainingCredit")
   requireNonnegative(pool, "pool")
   return math.min(normalRemainingCredit, pool)
+end
+
+-- Caller resolves the world era and supplies CostMultiplier / 100. Gold floors
+-- scale continuously; this is deliberate policy, not duration rounding.
+function M.EraCreditMinimum(eraType, scale, config)
+  local c = configOrDefault(config)
+  assert(type(eraType) == "string" and type(c.credit.eraMinimums) == "table", "unknown or unconfigured credit era")
+  local minimum = c.credit.eraMinimums[eraType]
+  assert(finite(minimum) and minimum > 0, "credit era floor must be configured, finite and positive")
+  assert(finite(scale) and scale > 0, "credit era scale must be finite and positive")
+  local scaled = minimum * scale
+  assert(finite(scaled), "scaled credit era floor must be finite")
+  return scaled
 end
 
 function M.BaseCreditLimit(rating, netGPT, eraMinimum, config)

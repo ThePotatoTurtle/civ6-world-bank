@@ -30,34 +30,44 @@ WBL_CONFIG = {
       valueRatio = 1.15, -- Repayment present value per gold borrowed; proposed S11.
       terms = {20, 30}, -- Payment durations in Standard turns.
       graceTurns = 0, -- Grace duration in Standard turns.
-      milestoneForgiveness = 0.15, -- Fraction of remaining principal forgiven.
+      milestoneForgiveness = 0.10, -- Fraction of remaining principal forgiven for a selected milestone.
       penaltyStrength = 1.00, -- Fraction of base default penalty.
     },
     DEVELOPING = {
       valueRatio = 1.00, -- Repayment present value per gold borrowed; proposed S11.
       terms = {20, 30}, -- Payment durations in Standard turns.
       graceTurns = 3, -- Grace duration in Standard turns.
-      milestoneForgiveness = 0.25, -- Fraction of remaining principal forgiven.
+      milestoneForgiveness = 0.15, -- Fraction of remaining principal forgiven for a selected milestone.
       penaltyStrength = 0.75, -- Fraction of base default penalty.
     },
     UNDERDEVELOPED = {
       valueRatio = 0.85, -- Repayment present value per gold borrowed; proposed S11.
       terms = {20, 30, 40}, -- Payment durations in Standard turns.
       graceTurns = 6, -- Grace duration in Standard turns.
-      milestoneForgiveness = 0.35, -- Fraction of remaining principal forgiven.
+      milestoneForgiveness = 0.20, -- Fraction of remaining principal forgiven for a selected milestone.
       penaltyStrength = 0.50, -- Fraction of base default penalty.
     },
   },
   credit = {
-    A = {limitMultiple = 12, valueAdjustment = -0.05}, -- GPT multiple and V fraction.
+    A = {limitMultiple = 15, valueAdjustment = -0.05}, -- GPT multiple and V fraction.
     B = {limitMultiple = 10, valueAdjustment = 0}, -- GPT multiple and V fraction.
-    C = {limitMultiple = 6, valueAdjustment = 0.10}, -- GPT multiple and V fraction.
-    D = {limitMultiple = 0, valueAdjustment = 0}, -- No new borrowing; restore C when all arrears clear.
+    C = {limitMultiple = 7.5, valueAdjustment = 0.10}, -- GPT multiple and V fraction.
+    D = {limitMultiple = 0, valueAdjustment = 0}, -- No new borrowing; restore C after all current bank debt is settled.
     scarValueAdjustment = 0.10, -- V fraction added after leaving default.
     scarTurns = 30, -- Credit scar duration in Standard turns.
     missedPaymentsToDowngrade = 3, -- Missed installments on one loan.
     earlyRepayInterestFraction = 0.10, -- Lock at origination; fraction of unmatured interest due on early repayment.
-    eraMinimums = false, -- UNSPECIFIED: production credit era minimums await tuning.
+    eraMinimums = {
+      ERA_ANCIENT = 200, -- Base credit floor in Standard gold; scale by game-speed CostMultiplier / 100.
+      ERA_CLASSICAL = 300, -- Base credit floor in Standard gold.
+      ERA_MEDIEVAL = 400, -- Base credit floor in Standard gold.
+      ERA_RENAISSANCE = 600, -- Base credit floor in Standard gold.
+      ERA_INDUSTRIAL = 800, -- Base credit floor in Standard gold.
+      ERA_MODERN = 1000, -- Base credit floor in Standard gold.
+      ERA_ATOMIC = 1200, -- Base credit floor in Standard gold.
+      ERA_INFORMATION = 1500, -- Base credit floor in Standard gold.
+      ERA_FUTURE = 1800, -- Base credit floor in Standard gold.
+    },
   },
   liquidity = {
     normalThreshold = 1.00, -- Pool divided by base reserve cap.

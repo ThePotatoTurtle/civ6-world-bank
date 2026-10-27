@@ -8,6 +8,24 @@ Planned disaster recovery loans replace payment pauses. The dev tools test prici
 
 Planned early repayment costs all unpaid principal, overdue interest and arrears fees, plus 10% of future interest. Early closure does not improve the credit rating. Pure settlement helpers are tested; live collection and loan closure remain unimplemented.
 
+Planned milestone forgiveness is 10% for Developed, 15% for Developing and 20% for Underdeveloped civs. Players choose their goals; already-completed goals are ineligible.
+
+Credit limits are 15× net GPT for A, 10× for B and 7.5× for C, with a shared world-era minimum scaled by game speed. D allows no new loans. Clearing all arrears ends default penalties; settling all existing bank debt restores C without requiring another loan.
+
+| World era | Minimum credit limit (Standard gold) |
+|---|---:|
+| Ancient | 200 |
+| Classical | 300 |
+| Medieval | 400 |
+| Renaissance | 600 |
+| Industrial | 800 |
+| Modern | 1,000 |
+| Atomic | 1,200 |
+| Information | 1,500 |
+| Future | 1,800 |
+
+For ratings A–C, `creditLimit = max(eraFloor × CostMultiplier / 100, max(0, netGPT) × ratingMultiple)`. The scaled floor is not rounded, and the GPT multipliers remain unchanged across game speeds. Existing outstanding principal counts against this aggregate limit; bank cash, liquidity, lending freezes and all usual borrowing restrictions still apply. Players may borrow less than the ceiling; the floor is not a required minimum loan amount. Production collection and the rating reducer remain unimplemented.
+
 Requires Python 3.11+ with `lupa` for offline checks. The checker explicitly uses Lua 5.1. No ModBuddy is required.
 
 ```powershell
@@ -47,3 +65,6 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 - Feature: nonbinding AI deal inspections and more source-backed engine probes.
 - Change: planned disaster recovery pricing replaces unused payment pause settings.
 - Change: early repayment discounts future interest only and gives no rating upgrade.
+- Balance: selected milestone forgiveness is 10% / 15% / 20% by development tier.
+- Balance: revised credit limits and shared world-era floors scaled by game speed.
+- Fix: recovery from D requires all existing bank debt to be settled, without another loan.
