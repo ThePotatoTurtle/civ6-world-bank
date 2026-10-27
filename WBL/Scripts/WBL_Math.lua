@@ -224,6 +224,41 @@ function M.ProductLoanQuote(request, config)
   return quote
 end
 
+-- Pure settlement preview from locked, non-overlapping balances. Maturing debt
+-- moves OUT of scheduledPrincipal/futureInterest into overdue buckets exactly once.
+-- The caller must reject an underfunded settlement atomically; no cash moves here.
+function M.EarlySettlementQuote(snapshot)
+  assert(type(snapshot) == "table", "settlement requires a locked balance snapshot")
+  requireNonnegative(snapshot.scheduledPrincipal, "scheduledPrincipal")
+  requireNonnegative(snapshot.overduePrincipal, "overduePrincipal")
+  requireNonnegative(snapshot.futureInterest, "futureInterest")
+  requireNonnegative(snapshot.overdueInterest, "overdueInterest")
+  requireNonnegative(snapshot.arrearsFees, "arrearsFees")
+  requireNonnegative(snapshot.earlyRepayInterestFraction, "earlyRepayInterestFraction")
+  assert(snapshot.earlyRepayInterestFraction <= 1, "earlyRepayInterestFraction must be at most one")
+  local principalDue = snapshot.scheduledPrincipal + snapshot.overduePrincipal
+  local futureInterestDue = snapshot.earlyRepayInterestFraction * snapshot.futureInterest
+  local totalDue = principalDue + snapshot.overdueInterest + snapshot.arrearsFees + futureInterestDue
+  requireNonnegative(totalDue, "totalDue")
+  return {
+    principalDue = principalDue,
+    overdueInterestDue = snapshot.overdueInterest,
+    arrearsFeesDue = snapshot.arrearsFees,
+    futureInterestDue = futureInterestDue,
+    waivedFutureInterest = (1 - snapshot.earlyRepayInterestFraction) * snapshot.futureInterest,
+    totalDue = totalDue,
+  }
+end
+
+-- Pure policy only, called after verified full closure. Balance validation,
+-- atomic closure and retained lineage history belong to the reducer.
+-- An early closure never earns a promotion.
+function M.RatingPromotionEligible(closureKind, everMissedPayment)
+  assert(closureKind == "MATURITY" or closureKind == "EARLY", "unknown loan closure kind")
+  assert(type(everMissedPayment) == "boolean", "missed-payment history must be boolean")
+  return closureKind == "MATURITY" and not everMissedPayment
+end
+
 function M.RecoveryClaimWindow(scale, config)
   local c = configOrDefault(config)
   return M.ScaleTurns(c.disasterRecovery.claimWindowTurns, scale)

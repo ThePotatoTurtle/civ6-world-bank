@@ -56,7 +56,7 @@ WBL_CONFIG = {
     scarValueAdjustment = 0.10, -- V fraction added after leaving default.
     scarTurns = 30, -- Credit scar duration in Standard turns.
     missedPaymentsToDowngrade = 3, -- Missed installments on one loan.
-    earlyRepayInterestFraction = 0.10, -- Fraction of remaining interest due on early repayment.
+    earlyRepayInterestFraction = 0.10, -- Lock at origination; fraction of unmatured interest due on early repayment.
     eraMinimums = false, -- UNSPECIFIED: production credit era minimums await tuning.
   },
   liquidity = {

@@ -6,6 +6,8 @@ The current build contains research tools and tested pure formulas. It does not 
 
 Planned disaster recovery loans replace payment pauses. The dev tools test pricing and Congress data; actual qualification, per-disaster claims and lending remain unimplemented. The approved base value ratios are 1.10 for Developed, 0.90 for Developing and 0.80 for Underdeveloped, with the same tier terms and grace, normal adjustments and 0.80 floor, and a 15 Standard turn claim window. Principal is capped by remaining normal credit and available bank cash.
 
+Planned early repayment costs all unpaid principal, overdue interest and arrears fees, plus 10% of future interest. Early closure does not improve the credit rating. Pure settlement helpers are tested; live collection and loan closure remain unimplemented.
+
 Requires Python 3.11+ with `lupa` for offline checks. The checker explicitly uses Lua 5.1. No ModBuddy is required.
 
 ```powershell
@@ -44,3 +46,4 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 - Feature: explicit-path installer and exact-file dev package.
 - Feature: nonbinding AI deal inspections and more source-backed engine probes.
 - Change: planned disaster recovery pricing replaces unused payment pause settings.
+- Change: early repayment discounts future interest only and gives no rating upgrade.
