@@ -5,6 +5,7 @@ include("WBL_Math");
 include("WBL_SpikePlayerEffects");
 include("WBL_SpikeMilestones");
 include("WBL_SpikeAI");
+include("WBL_SpikeDisasterRecovery");
 
 local RUN_KEY = "WBL_SPIKE_RUN";
 local STATUS_KEY = "WBL_SPIKE_STATUS";
@@ -53,7 +54,7 @@ local function ValidConfig(config)
     end
     assert(config.growth.standardMin <= config.growth.standardMax, "inverted_growth_bounds");
     assert(type(WBL_MATH) == "table", "math_module_missing");
-    assert(type(WBL_SPIKE_PLAYER_EFFECTS) == "table" and type(WBL_SPIKE_MILESTONES) == "table" and type(WBL_SPIKE_AI) == "table", "probe_helpers_missing");
+    assert(type(WBL_SPIKE_PLAYER_EFFECTS) == "table" and type(WBL_SPIKE_MILESTONES) == "table" and type(WBL_SPIKE_AI) == "table" and type(WBL_SPIKE_DISASTER_RECOVERY) == "table", "probe_helpers_missing");
     assert(finite(config.investors.presidentMerchantPoints) and config.investors.presidentMerchantPoints >= 0, "invalid_merchant_rate");
     for _, tierName in ipairs({ "DEVELOPED", "DEVELOPING", "UNDERDEVELOPED" }) do
       local tier = config.tiers[tierName];
@@ -272,20 +273,6 @@ local function Relationships(run)
   end
 end
 
-local function DisasterHistory(run, turn)
-  local event, err = Read(function() return GameRandomEvents.GetEventsForTurn(turn); end);
-  if err then
-    Log(run, "S5", "history_" .. turn, err, "history_available_in_gameplay", "RAW");
-  elseif event ~= nil then
-    Log(run, "S5", "history_" .. turn,
-      "type:" .. Text(event.RandomEvent) .. ",start:" .. Text(event.StartLocation) ..
-      ",current:" .. Text(event.CurrentLocation) .. ",tilesDamaged:" .. Text(event.TilesDamaged) ..
-      ",populationLost:" .. Text(event.PopLost), "raw_history_not_city_owner_attribution", "RAW");
-  else
-    Log(run, "S5", "history_" .. turn, "none", "raw_history_not_city_owner_attribution", "RAW");
-  end
-end
-
 local function ObserveEconomy(run, turn)
   local snapshots, total, totalProduction, productionComplete = {}, 0, 0, true;
   local living = Majors();
@@ -426,9 +413,8 @@ function WBL_RunAllSpikes(ePlayer, params)
     WBL_SPIKE_PLAYER_EFFECTS.EstablishContact(player, ProbeLog(run));
     Log(run, "S3", "deal_rate", "UI_matrix_observation_separate",
       "AI_gold_GPT_acceptability_samples_from_UI_probe", "PENDING");
-    Log(run, "S5", "damage_attribution", "aggregate_history_only",
-      "damaged_city_owner_at_synced_boundary", "PENDING");
-    DisasterHistory(run, turn);
+    Log(run, "S5", "recovery_probe_scheduled", "next_synced_OnGameTurnStarted",
+      "pre_vote_aid_merit_original_disaster_ID_and_affected_major_evidence", "PENDING");
     run.aiProbe = WBL_SPIKE_AI.Run(Majors(), WBL_CONFIG, ProbeLog(run));
     ObserveEconomy(run, turn);
     Log(run, "S11", "growth_tuning", "telemetry_started", "representative_speed_histories", "PENDING");
@@ -488,7 +474,7 @@ local function OnGameTurnStarted(turn)
       if run.aiProbe then run.aiProbe = WBL_SPIKE_AI.Observe(Majors(), run.aiProbe, WBL_CONFIG, ProbeLog(run)); end
     end
     Relationships(run);
-    DisasterHistory(run, now - 1);
+    run.disasterProbe = WBL_SPIKE_DISASTER_RECOVERY.Observe(Majors(), run.disasterProbe, now, ProbeLog(run));
     if run.milestones and not run.milestones.completed then
       run.milestones = WBL_SPIKE_MILESTONES.Observe(Players[run.playerID], CandidateCity(run), run.milestones, WBL_CONFIG, ProbeLog(run));
     end

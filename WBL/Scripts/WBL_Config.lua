@@ -2,7 +2,7 @@
 -- The standalone dev mod receives an identical generated copy of this file.
 WBL_CONFIG = {
   version = "0.0.0", -- Production semantic version; no playable release exists yet.
-  devVersion = "0.0.0.2", -- Dev version targeting the production version above.
+  devVersion = "0.0.0.3", -- Dev version targeting the production version above.
   growth = {
     standardDefault = 0.035, -- Growth fraction per Standard turn; proposed until S11.
     standardMin = 0.005, -- Minimum growth fraction per Standard turn; proposed until S11.
@@ -108,10 +108,16 @@ WBL_CONFIG = {
     restructureTermTurns = 30, -- Replacement loan payment duration in Standard turns.
     debtReliefFraction = 0.50, -- Fraction of eligible debt and arrears forgiven.
     debtReliefTurns = 15, -- Milestone deadline in Standard turns.
-    disasterPauseTurns = 5, -- Payment pause in Standard turns.
-    disasterCooldownTurns = 30, -- Per-loan pause cooldown in Standard turns.
     maxRestructuresPerLineage = 1, -- Uses per original loan lineage.
     maxDebtReliefPerGame = 1, -- Uses per borrower per game.
+  },
+  disasterRecovery = {
+    valueRatio = {
+      DEVELOPED = 1.10, -- Recovery repayment present value per gold borrowed; Leon 2026-10-27.
+      DEVELOPING = 0.90, -- Recovery repayment present value per gold borrowed; Leon 2026-10-27.
+      UNDERDEVELOPED = 0.80, -- Recovery repayment present value per gold borrowed; Leon 2026-10-27.
+    },
+    claimWindowTurns = 15, -- Claim duration in Standard turns from the authoritative qualifying event turn; S5 unverified.
   },
   grants = {
     gptMultiple = 3, -- Grant gold divided by current net GPT, before era minimum.
@@ -169,7 +175,7 @@ WBL_CONFIG = {
   },
   features = {
     aiBorrowingVerified = false, -- S8 gameplay capability gate.
-    disasterPauseVerified = false, -- S5 gameplay capability gate.
+    disasterRecoveryVerified = false, -- S5 Congress qualification and disaster identity remain unverified.
     merchantPointsVerified = false, -- S9 gameplay capability gate.
     envoyVerified = false, -- S9 gameplay capability gate.
   },

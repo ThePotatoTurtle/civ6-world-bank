@@ -4,6 +4,8 @@ World Bank Loans is a Civilization VI: Gathering Storm mod in development. The p
 
 The current build contains research tools and tested pure formulas. It does not implement a playable bank. The standalone dev mod probes engine APIs in a new single-player game and records PASS, FAIL and PENDING results. Multiplayer is untested; the dev tools refuse multiplayer and hotseat requests.
 
+Planned disaster recovery loans replace payment pauses. The dev tools test pricing and Congress data; actual qualification, per-disaster claims and lending remain unimplemented. The approved base value ratios are 1.10 for Developed, 0.90 for Developing and 0.80 for Underdeveloped, with the same tier terms and grace, normal adjustments and 0.80 floor, and a 15 Standard turn claim window. Principal is capped by remaining normal credit and available bank cash.
+
 Requires Python 3.11+ with `lupa` for offline checks. The checker explicitly uses Lua 5.1. No ModBuddy is required.
 
 ```powershell
@@ -26,12 +28,12 @@ Use a new Gathering Storm single-player game at Standard speed with at least thr
 
 ```powershell
 python tools/summarize_log.py 'C:\path\to\Lua.log'
-python tools/package.py --output dist/World_Bank_Loans_Dev_0.0.0.2.zip
+python tools/package.py --output dist/World_Bank_Loans_Dev_0.0.0.3.zip
 ```
 
 Packages contain the modinfo and exactly its listed files. Generated dev copies of the config and formulas must match their single sources in `WBL/Scripts` byte for byte.
 
-The dev panel's **Reload Config** logs include status and version after re-including the config in single player. Reading edits from disk during a running game remains unverified. The first session also leaves AI deal rates, disaster victim attribution, reversible penalties, perk writers and long-run balance pending where evidence is incomplete. The production bank UI and synced finance requests follow those checks.
+The dev panel's **Reload Config** logs include status and version after re-including the config in single player. Reading edits from disk during a running game remains unverified. The first session also leaves AI deal rates, Congress disaster eligibility, reversible penalties, perk writers and long-run balance pending where evidence is incomplete. The production bank UI and synced finance requests follow those checks.
 
 ## Update log
 
@@ -41,3 +43,4 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 - Feature: pure formula tests and source validation tools.
 - Feature: explicit-path installer and exact-file dev package.
 - Feature: nonbinding AI deal inspections and more source-backed engine probes.
+- Change: planned disaster recovery pricing replaces unused payment pause settings.

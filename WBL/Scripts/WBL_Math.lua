@@ -166,11 +166,16 @@ function M.Hysteresis(currentTier, pendingTier, pendingCount, ratio, config)
   return currentTier, target, count
 end
 
-function M.AdjustedV(tier, rating, investor, liquidityAdjustment, scarActive, config)
+-- Product is optional after config so existing ordinary-quote callers keep their arguments.
+function M.AdjustedV(tier, rating, investor, liquidityAdjustment, scarActive, config, product)
   local c = configOrDefault(config)
+  if product == nil then product = "ORDINARY" end
+  assert(product == "ORDINARY" or product == "RECOVERY", "unknown loan product")
   assert(c.tiers[tier] and c.credit[rating])
   assert(rating ~= "D", "rating D cannot originate a loan")
-  local value = c.tiers[tier].valueRatio + c.credit[rating].valueAdjustment
+  local base = c.tiers[tier].valueRatio
+  if product == "RECOVERY" then base = c.disasterRecovery.valueRatio[tier] end
+  local value = base + c.credit[rating].valueAdjustment
   if investor then value = value + c.investors.preferredValueAdjustment
   else value = value + liquidityAdjustment end
   if scarActive then value = value + c.credit.scarValueAdjustment end
@@ -194,6 +199,41 @@ function M.LoanQuote(principal, valueRatio, growth, paymentTurns, graceTurns, co
     paymentTurns = paymentTurns, graceTurns = graceTurns, annuity = annuity,
     pvPerGold = pvPerGold, nominalRate = nominal, totalRepayment = total,
     payment = total / paymentTurns}
+end
+
+-- Pure preview only: the reducer must separately establish eligibility and reserve cash.
+-- growth is already expressed per game turn; term and grace are scaled from Standard.
+function M.ProductLoanQuote(request, config)
+  local c = configOrDefault(config)
+  local product = request.product
+  if product == nil then product = "ORDINARY" end
+  local tier = c.tiers[request.tier]
+  assert(tier and tier.terms, "unknown development tier")
+  local allowedTerm = false
+  for i = 1, #tier.terms do
+    if request.standardTermTurns == tier.terms[i] then allowedTerm = true end
+  end
+  assert(allowedTerm, "term is not available to this development tier")
+  local value = M.AdjustedV(request.tier, request.rating, request.investor,
+    request.liquidityAdjustment, request.scarActive, c, product)
+  local quote = M.LoanQuote(request.principal, value, request.growth,
+    M.ScaleTurns(request.standardTermTurns, request.scale),
+    M.ScaleTurns(tier.graceTurns, request.scale), c)
+  quote.product, quote.tier = product, request.tier
+  quote.standardTermTurns = request.standardTermTurns
+  return quote
+end
+
+function M.RecoveryClaimWindow(scale, config)
+  local c = configOrDefault(config)
+  return M.ScaleTurns(c.disasterRecovery.claimWindowTurns, scale)
+end
+
+-- No extra credit line or earmarked recovery pool: inputs are the normal remaining limits.
+function M.RecoveryPrincipalCap(normalRemainingCredit, pool)
+  requireNonnegative(normalRemainingCredit, "normalRemainingCredit")
+  requireNonnegative(pool, "pool")
+  return math.min(normalRemainingCredit, pool)
 end
 
 function M.BaseCreditLimit(rating, netGPT, eraMinimum, config)
