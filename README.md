@@ -10,6 +10,8 @@ Planned early repayment costs all unpaid principal, overdue interest and arrears
 
 Planned milestone forgiveness is 10% for Developed, 15% for Developing and 20% for Underdeveloped civs. Players choose their goals; already-completed goals are ineligible.
 
+Loan pricing uses each living major civilization’s production growth over 20 Standard turns, takes the median, and smooths it with a 5-Standard-turn half-life before applying the bounds. The default is 2.5% per Standard turn, with a 0% minimum and 5% maximum. On Online speed, those rates are 5.0625%, 0% and 10.25%. Existing loans keep their original rate.
+
 Credit limits are 15× net GPT for A, 10× for B and 7.5× for C, with a shared world-era minimum scaled by game speed. D allows no new loans. Clearing all arrears ends default penalties; settling all existing bank debt restores C without requiring another loan.
 
 | World era | Minimum credit limit (Standard gold) | Minimum credit limit (Online gold) |
@@ -65,6 +67,8 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 - Feature: nonbinding AI deal inspections and more source-backed engine probes.
 - Change: planned disaster recovery pricing replaces unused payment pause settings.
 - Change: early repayment discounts future interest only and gives no rating upgrade.
+- Change: production growth drives loan pricing through a matched-major median and smoothing.
+- Balance: growth defaults to 2.5%, bounded from 0% to 5% per Standard turn.
 - Balance: selected milestone forgiveness is 10% / 15% / 20% by development tier.
 - Balance: revised credit limits and shared world-era floors scaled by game speed.
 - Balance: user-selected fixed era floors run from 100 gold in Ancient to 4,500 in Future at Standard speed, with Classical corrected to 200 Standard / 100 Online.

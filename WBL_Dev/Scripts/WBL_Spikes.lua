@@ -10,11 +10,17 @@ include("WBL_SpikeDisasterRecovery");
 local RUN_KEY = "WBL_SPIKE_RUN";
 local STATUS_KEY = "WBL_SPIKE_STATUS";
 local FLAG_KEY = "WBL_SPIKE_CITY_ACTIVE";
+local GROWTH_KEY = "WBL_SPIKE_PRODUCTION_GROWTH";
+local GROWTH_RESET_KEY = "WBL_SPIKE_PRODUCTION_RESET";
 
 local function Read(fn)
   local ok, value = pcall(fn);
   if ok then return value, nil; end
   return nil, tostring(value);
+end
+
+local function IsFinite(value)
+  return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge;
 end
 
 local function Text(value)
@@ -49,10 +55,19 @@ local function ValidConfig(config)
     assert(config.spikes.standardAutoplayTurns >= config.spikes.observationTurns, "short_standard_observation");
     assert(config.spikes.onlineAutoplayTurns >= config.spikes.observationTurns, "short_online_observation");
     assert(type(config.growth) == "table" and finite(config.growth.windowTurns) and config.growth.windowTurns > 0, "invalid_growth_window");
+    assert(config.growth.model == "production_median_log_ema_v1", "invalid_growth_model");
+    assert(finite(config.growth.emaHalfLifeTurns) and config.growth.emaHalfLifeTurns > 0, "invalid_growth_half_life");
+    assert(finite(config.growth.coverageFraction) and config.growth.coverageFraction > 0 and config.growth.coverageFraction <= 1, "invalid_growth_coverage");
+    for _, name in ipairs({ "minimumPairs", "smallWorldPlayers" }) do
+      assert(finite(config.growth[name]) and config.growth[name] > 0 and config.growth[name] % 1 == 0, "invalid_growth_" .. name);
+    end
+    assert(config.growth.smallWorldPlayers < config.growth.minimumPairs, "invalid_growth_small_world_threshold");
     for _, name in ipairs({ "standardDefault", "standardMin", "standardMax" }) do
       assert(finite(config.growth[name]) and config.growth[name] > -1, "invalid_growth_" .. name);
     end
+    assert(config.growth.standardMin >= 0, "negative_growth_floor");
     assert(config.growth.standardMin <= config.growth.standardMax, "inverted_growth_bounds");
+    assert(config.growth.standardDefault >= config.growth.standardMin and config.growth.standardDefault <= config.growth.standardMax, "growth_default_outside_bounds");
     assert(type(WBL_MATH) == "table", "math_module_missing");
     assert(type(WBL_SPIKE_PLAYER_EFFECTS) == "table" and type(WBL_SPIKE_MILESTONES) == "table" and type(WBL_SPIKE_AI) == "table" and type(WBL_SPIKE_DISASTER_RECOVERY) == "table", "probe_helpers_missing");
     assert(finite(config.investors.presidentMerchantPoints) and config.investors.presidentMerchantPoints >= 0, "invalid_merchant_rate");
@@ -67,6 +82,21 @@ local function ValidConfig(config)
     end
   end);
   return ok, reason;
+end
+
+local function GrowthConfigSignature(config)
+  if type(config) ~= "table" or type(config.growth) ~= "table" then return "invalid"; end
+  local values = {};
+  for _, name in ipairs({ "model", "standardDefault", "standardMin", "standardMax", "windowTurns", "emaHalfLifeTurns", "minimumPairs", "coverageFraction", "smallWorldPlayers" }) do
+    values[#values + 1] = tostring(config.growth[name]);
+  end
+  return table.concat(values, "|");
+end
+
+local function GrowthResetToken()
+  local token = Game:GetProperty(GROWTH_RESET_KEY);
+  if not IsFinite(token) or token < 0 or token % 1 ~= 0 then return 0; end
+  return token;
 end
 
 local function Publish(run, phase, message)
@@ -128,23 +158,42 @@ local function Development(player)
 end
 
 local function PlayerSnapshot(player)
-  local development = Development(player);
-  local treasury = player:GetTreasury();
   local playerID = player:GetID();
-  local configuration = PlayerConfigurations[playerID];
-  local difficulty = GameInfo.Difficulties[configuration:GetHandicapTypeID()];
-  local production = Read(function()
+  local production, productionError = Read(function()
     local total = 0;
-    for _, city in ipairs(Cities(player)) do total = total + city:GetYield(YieldTypes.PRODUCTION); end
+    for _, city in ipairs(Cities(player)) do
+      local cityProduction = city:GetYield(YieldTypes.PRODUCTION);
+      assert(IsFinite(cityProduction) and cityProduction >= 0, "invalid_city_production");
+      total = total + cityProduction;
+    end
+    assert(IsFinite(total), "invalid_total_production");
     return total;
   end);
+  local gold, goldError = Read(function()
+    local treasury = player:GetTreasury();
+    local value = treasury:GetGoldBalance();
+    assert(IsFinite(value), "invalid_gold_balance");
+    return value;
+  end);
+  local gpt, gptError = Read(function()
+    local treasury = player:GetTreasury();
+    local value = treasury:GetGoldYield() - treasury:GetTotalMaintenance();
+    assert(IsFinite(value), "invalid_net_GPT");
+    return value;
+  end);
+  local development, developmentError = Read(function() return Development(player); end);
+  local difficulty, difficultyError = Read(function()
+    local configuration = PlayerConfigurations[playerID];
+    local row = GameInfo.Difficulties[configuration:GetHandicapTypeID()];
+    return row and row.DifficultyType or "UNRESOLVED";
+  end);
+  local human, humanError = Read(function() return player:IsHuman(); end);
   return {
-    playerID = player:GetID(), human = player:IsHuman(),
-    gold = treasury:GetGoldBalance(),
-    gpt = treasury:GetGoldYield() - treasury:GetTotalMaintenance(),
-    techs = development.techs, civics = development.civics,
-    difficulty = difficulty and difficulty.DifficultyType or "UNRESOLVED"
-    , production = production
+    playerID = playerID, human = human, gold = gold, gpt = gpt,
+    techs = development and development.techs, civics = development and development.civics,
+    difficulty = difficulty or "UNRESOLVED", production = production,
+    productionError = productionError, goldError = goldError, gptError = gptError,
+    developmentError = developmentError, difficultyError = difficultyError, humanError = humanError
   };
 end
 
@@ -273,72 +322,81 @@ local function Relationships(run)
   end
 end
 
+local function QuoteRates(run, growth)
+  for _, name in ipairs({ "DEVELOPED", "DEVELOPING", "UNDERDEVELOPED" }) do
+    local tier = WBL_CONFIG.tiers[name];
+    for _, term in ipairs(tier.terms) do
+      local turns = WBL_MATH.ScaleTurns(term, run.speedScale);
+      local grace = WBL_MATH.ScaleTurns(tier.graceTurns, run.speedScale);
+      -- Unit principal is a dimensional normalization; nominal rate is principal-independent.
+      local quote = WBL_MATH.LoanQuote(1, tier.valueRatio, growth, turns, grace);
+      Log(run, "S11", "nominal_" .. name .. "_" .. term,
+        "rate:" .. quote.nominalRate .. ",payments:" .. turns .. ",grace:" .. grace .. ",gameGrowth:" .. growth,
+        "unadjusted_tier_quote_from_published_production_g", "RAW");
+    end
+  end
+end
+
 local function ObserveEconomy(run, turn)
-  local snapshots, total, totalProduction, productionComplete = {}, 0, 0, true;
-  local living = Majors();
+  local snapshots, facts = {}, {};
+  local goldTotal, goldReadable, productionTotal, productionReadable = 0, 0, 0, 0;
+  local living, cohortError = Read(function() return Majors(); end);
+  if living == nil then living = {}; end
   for _, player in ipairs(living) do
     local snapshot, err = Read(function() return PlayerSnapshot(player); end);
     if snapshot then
       snapshots[#snapshots + 1] = snapshot;
-      total = total + snapshot.gpt;
-      if snapshot.production == nil then productionComplete = false;
-      else totalProduction = totalProduction + snapshot.production; end
+      facts[#facts + 1] = { id = snapshot.playerID, alive = true, isMajor = true, production = snapshot.production };
+      if IsFinite(snapshot.gpt) then
+        goldTotal = goldTotal + snapshot.gpt;
+        goldReadable = goldReadable + 1;
+      end
+      if IsFinite(snapshot.production) then
+        productionTotal = productionTotal + snapshot.production;
+        productionReadable = productionReadable + 1;
+      end
+      Log(run, "S11", "production_player_" .. snapshot.playerID, snapshot.production,
+        "finite_nonnegative_city_production_sum", IsFinite(snapshot.production) and "RAW" or "PENDING", snapshot.productionError);
       if (turn - run.startTurn) % WBL_CONFIG.spikes.logEveryTurns == 0 then
-        Log(run, "S11", "economy_player_" .. snapshot.playerID,
-          "gold:" .. snapshot.gold .. ",netGPT:" .. snapshot.gpt ..
-          ",techs:" .. snapshot.techs .. ",civics:" .. snapshot.civics,
-          "raw_living_major_snapshot", "RAW");
+        Log(run, "S11", "gold_DIAGNOSTIC_player_" .. snapshot.playerID,
+          "gold:" .. Text(snapshot.gold) .. ",netGPT:" .. Text(snapshot.gpt) ..
+          ",techs:" .. Text(snapshot.techs) .. ",civics:" .. Text(snapshot.civics),
+          "gold_diagnostic_only_never_pricing", IsFinite(snapshot.gpt) and "RAW" or "PENDING", snapshot.gptError or snapshot.goldError);
       end
       if (turn - run.startTurn) % WBL_CONFIG.spikes.difficultyLogEveryTurns == 0 then
         Log(run, "S12", "difficulty_player_" .. snapshot.playerID,
           snapshot.difficulty .. ",human:" .. Text(snapshot.human) ..
-          ",techs:" .. snapshot.techs .. ",civics:" .. snapshot.civics,
-          "raw_profile_not_calibration", "RAW");
+          ",techs:" .. Text(snapshot.techs) .. ",civics:" .. Text(snapshot.civics),
+          "raw_profile_not_calibration", snapshot.difficultyError and "PENDING" or "RAW", snapshot.difficultyError);
       end
     else
-      Log(run, "S11", "economy_player_" .. player:GetID(), err, "snapshot_readable", "PENDING");
+      facts[#facts + 1] = { id = player:GetID(), alive = true, isMajor = true };
+      Log(run, "S11", "production_player_" .. player:GetID(), err, "snapshot_readable", "PENDING");
     end
   end
-  local complete = #snapshots == #living and #living > 0;
-  local average = complete and total / #snapshots or nil;
-  run.history[#run.history + 1] = { turn = turn, averageNetGPT = average, players = snapshots };
-  Log(run, "S11", "world_income", "I(t):" .. Text(average) .. ",majors:" .. #living ..
-    ",readable:" .. #snapshots .. ",averageProduction:" .. Text(complete and productionComplete and totalProduction / #snapshots or nil),
-    "complete_living_major_average_netGPT", complete and "RAW" or "PENDING");
-  if average ~= nil and average > 0 and average ~= math.huge then
-    local window = WBL_MATH.ScaleTurns(WBL_CONFIG.growth.windowTurns, run.speedScale);
-    local prior;
-    for _, observation in ipairs(run.history) do
-      if observation.turn == turn - window then prior = observation.averageNetGPT; end
-    end
-    local growth, mode, raw;
-    if turn - run.startTurn >= window and prior == nil then
-      mode = "missing_reference_observation";
-    else
-      growth, mode, raw = WBL_MATH.Growth(average, prior, run.speedScale);
-    end
-    Log(run, "S11", "growth", "g:" .. Text(growth) .. ",mode:" .. Text(mode) ..
-      ",raw:" .. Text(raw) .. ",prior:" .. Text(prior) .. ",window:" .. window ..
-      ",speed:" .. run.speedType .. ",scale:" .. run.speedScale,
-      "speed_scaled_default_or_measured_clamped_g", growth and "RAW" or "PENDING");
-    if growth then
-      for _, name in ipairs({ "DEVELOPED", "DEVELOPING", "UNDERDEVELOPED" }) do
-        local tier = WBL_CONFIG.tiers[name];
-        for _, term in ipairs(tier.terms) do
-          local turns = WBL_MATH.ScaleTurns(term, run.speedScale);
-          local grace = WBL_MATH.ScaleTurns(tier.graceTurns, run.speedScale);
-          -- A unit principal is a dimensional normalization; nominal rate is principal-independent.
-          local quote = WBL_MATH.LoanQuote(1, tier.valueRatio, growth, turns, grace);
-          Log(run, "S11", "nominal_" .. name .. "_" .. term,
-            "rate:" .. quote.nominalRate .. ",payments:" .. turns .. ",grace:" .. grace,
-            "unadjusted_tier_quote_from_current_g", "RAW");
-        end
-      end
-    end
-  else
-    Log(run, "S11", "growth", average, "positive_complete_world_index", "PENDING");
-  end
-
+  local goldAverage = #living > 0 and goldReadable == #living and IsFinite(goldTotal) and goldTotal / #living or nil;
+  local productionAverage = #living > 0 and productionReadable == #living and IsFinite(productionTotal) and productionTotal / #living or nil;
+  if type(run.history) ~= "table" then run.history = {}; end
+  run.history[#run.history + 1] = { turn = turn, diagnosticAverageNetGPT = goldAverage, averageProduction = productionAverage, players = snapshots };
+  Log(run, "S11", "world_gold_DIAGNOSTIC", "netGPT:" .. Text(goldAverage) .. ",majors:" .. #living .. ",readable:" .. goldReadable,
+    "gold_diagnostic_only_never_pricing", goldAverage and "RAW" or "PENDING", cohortError);
+  local state, result = WBL_MATH.ProductionGrowth(Game:GetProperty(GROWTH_KEY), {
+    turn = turn, scale = run.speedScale, resetToken = GrowthResetToken(),
+    complete = cohortError == nil, players = facts
+  }, WBL_CONFIG);
+  Game:SetProperty(GROWTH_KEY, state);
+  run.growth = result;
+  run.growthFingerprint = state.fingerprint;
+  Log(run, "S11", "growth", "metric:production,g:" .. Text(result.gameGrowth) ..
+    ",standardGrowth:" .. Text(result.standardGrowth) .. ",rawMedianLog:" .. Text(result.rawMedianLog) ..
+    ",emaLog:" .. Text(result.emaLog) .. ",validPairs:" .. Text(result.validPairs) ..
+    ",livingMajors:" .. Text(result.livingMajors) .. ",requiredPairs:" .. Text(result.requiredPairs) ..
+    ",window:" .. Text(result.windowTurns) .. ",reason:" .. Text(result.reason) ..
+    ",resetReason:" .. Text(result.resetReason) .. ",duplicate:" .. Text(result.duplicate) ..
+    ",speed:" .. run.speedType .. ",scale:" .. run.speedScale .. ",fingerprint:" .. Text(state.fingerprint),
+    "paired_major_production_standard_log_median_raw_EMA_then_output_clip",
+    result.measured and "RAW" or "PENDING", cohortError);
+  QuoteRates(run, result.gameGrowth);
 end
 
 local function Finish(run)
@@ -416,8 +474,9 @@ function WBL_RunAllSpikes(ePlayer, params)
     Log(run, "S5", "recovery_probe_scheduled", "next_synced_OnGameTurnStarted",
       "pre_vote_aid_merit_original_disaster_ID_and_affected_major_evidence", "PENDING");
     run.aiProbe = WBL_SPIKE_AI.Run(Majors(), WBL_CONFIG, ProbeLog(run));
-    ObserveEconomy(run, turn);
-    Log(run, "S11", "growth_tuning", "telemetry_started", "representative_speed_histories", "PENDING");
+    Log(run, "S11", "growth_scheduled", "next_synced_OnGameTurnStarted",
+      "production_only_estimator_observation_no_button_sample", "PENDING");
+    Log(run, "S11", "growth_tuning", "telemetry_scheduled", "representative_speed_histories", "PENDING");
     Log(run, "S12", "difficulty_tuning", "telemetry_started", "representative_difficulty_histories", "PENDING");
   end);
   if not ok then
@@ -438,6 +497,7 @@ function WBL_ReloadConfig(ePlayer, params)
   local player = Players[ePlayer];
   if player == nil or not player:IsHuman() then return; end
   local previous = WBL_CONFIG;
+  local previousGrowth = GrowthConfigSignature(previous);
   local active = Game:GetProperty(RUN_KEY);
   if active and not active.summaryPrinted then
     print("[SPIKE CONFIG] active_observation REJECTED");
@@ -446,8 +506,15 @@ function WBL_ReloadConfig(ePlayer, params)
   local ok, err = pcall(function() include("WBL_Config"); end);
   local valid, validationError = ValidConfig(WBL_CONFIG);
   if not ok or not valid then WBL_CONFIG = previous; end
+  local growthInvalidated = ok and valid and GrowthConfigSignature(WBL_CONFIG) ~= previousGrowth;
+  if growthInvalidated then
+    local resetToken = GrowthResetToken() + 1;
+    Game:SetProperty(GROWTH_RESET_KEY, resetToken);
+    Game:SetProperty(GROWTH_KEY, { invalidated = true, resetToken = resetToken, history = {} });
+  end
   print("[SPIKE CONFIG] include_request=" .. Text(ok) .. " version=" .. Text(WBL_CONFIG and WBL_CONFIG.version) ..
-    " valid=" .. Text(valid) .. " generated_SQL_requires_new_game=true fresh_disk_reload_verified=false error=" .. Text(err or validationError));
+    " valid=" .. Text(valid) .. " production_growth_invalidated=" .. Text(growthInvalidated) ..
+    " generated_SQL_requires_new_game=true fresh_disk_reload_verified=false error=" .. Text(err or validationError));
 end
 
 local function OnGameTurnStarted(turn)
@@ -463,7 +530,20 @@ local function OnGameTurnStarted(turn)
     return;
   end
   local now = Game.GetCurrentGameTurn();
-  if run.lastTurn ~= nil and now <= run.lastTurn then return; end
+  if run.lastTurn ~= nil and now == run.lastTurn then return; end
+  if run.lastTurn ~= nil and now < run.lastTurn then
+    -- Coherent saves rewind the run marker too. Fail closed for a stale/future
+    -- dev run while still allowing the pure estimator to invalidate its clock.
+    run.lastTurn = now;
+    run.startTurn = now;
+    run.history = {};
+    local observed, observationError = pcall(function() ObserveEconomy(run, now); end);
+    if not observed then Log(run, "HARNESS", "rewind_growth_error", observationError, "production_bootstrap_after_rewind", "FAIL"); end
+    ClearFlag(run);
+    Finish(run);
+    Publish(run, "ERROR", "Clock rewind detected; production model reset and candidate flags cleared. Start a new dev run.");
+    return;
+  end
   run.lastTurn = now;
   local ok, err = pcall(function()
     local elapsed = now - run.startTurn;

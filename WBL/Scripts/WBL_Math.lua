@@ -1,4 +1,4 @@
--- Engine-independent math. Load WBL_Config.lua first; no game API or state mutation.
+-- Engine-independent math. Load WBL_Config.lua first; pure transitions never mutate inputs.
 WBL_MATH = {}
 local M = WBL_MATH
 
@@ -39,19 +39,159 @@ function M.SpeedGrowth(standardGrowth, scale)
   return (1 + standardGrowth) ^ (1 / scale) - 1
 end
 
-function M.Growth(currentIndex, priorIndex, scale, config)
-  local c = configOrDefault(config)
-  local fallback = M.SpeedGrowth(c.growth.standardDefault, scale)
-  if priorIndex == nil then return fallback, "bootstrap" end
-  if not finite(currentIndex) or not finite(priorIndex)
-      or currentIndex <= 0 or priorIndex <= 0 then
-    return nil, "nonpositive_or_invalid_index"
+local function growthResultCopy(result)
+  local copy = {}
+  for _, key in ipairs({"gameGrowth", "standardGrowth", "rawMedianLog", "emaLog",
+      "validPairs", "livingMajors", "requiredPairs", "windowTurns", "reason",
+      "resetReason", "duplicate", "measured", "alpha"}) do copy[key] = result[key] end
+  return copy
+end
+
+local function validGrowthState(state)
+  if type(state) ~= "table" or type(state.fingerprint) ~= "string"
+      or not finite(state.lastTurn) or state.lastTurn % 1 ~= 0
+      or not finite(state.firstTurn) or state.firstTurn > state.lastTurn
+      or not finite(state.emaLog) or type(state.history) ~= "table"
+      or type(state.lastResult) ~= "table" or not finite(state.lastResult.gameGrowth)
+      or not finite(state.lastResult.standardGrowth) or not finite(state.lastResult.emaLog)
+      or type(state.lastResult.reason) ~= "string" then return false end
+  local priorTurn
+  for i = 1, #state.history do
+    local row = state.history[i]
+    if type(row) ~= "table" or not finite(row.turn) or row.turn % 1 ~= 0
+        or row.turn > state.lastTurn or (priorTurn and row.turn <= priorTurn)
+        or type(row.valid) ~= "boolean" or type(row.players) ~= "table" then return false end
+    priorTurn = row.turn
+    local priorID
+    for j = 1, #row.players do
+      local p = row.players[j]
+      if type(p) ~= "table" or not finite(p.id) or p.id < 0 or p.id % 1 ~= 0
+          or (priorID and p.id <= priorID) or not finite(p.production) or p.production < 0 then return false end
+      priorID = p.id
+    end
   end
-  local window = M.ScaleTurns(c.growth.windowTurns, scale)
-  local raw = (currentIndex / priorIndex) ^ (1 / window) - 1
-  local low = M.SpeedGrowth(c.growth.standardMin, scale)
-  local high = M.SpeedGrowth(c.growth.standardMax, scale)
-  return M.Clamp(raw, low, high), "measured", raw
+  return #state.history > 0 and state.history[#state.history].turn == state.lastTurn
+end
+
+-- The adapter supplies the complete authoritative cohort, including failed reads.
+-- State/history/results contain only ordered tables and serializable scalar facts.
+function M.ProductionGrowth(previous, observation, config)
+  local g = configOrDefault(config).growth
+  assert(g.model == "production_median_log_ema_v1", "unsupported growth model")
+  assert(finite(g.standardMin) and g.standardMin >= 0 and finite(g.standardMax)
+    and finite(g.standardDefault) and g.standardMin <= g.standardDefault
+    and g.standardDefault <= g.standardMax, "invalid growth bounds")
+  assert(finite(g.windowTurns) and g.windowTurns > 0
+    and finite(g.emaHalfLifeTurns) and g.emaHalfLifeTurns > 0, "invalid growth durations")
+  assert(finite(g.minimumPairs) and g.minimumPairs >= 1 and g.minimumPairs % 1 == 0
+    and finite(g.smallWorldPlayers) and g.smallWorldPlayers >= 1 and g.smallWorldPlayers % 1 == 0
+    and g.smallWorldPlayers < g.minimumPairs and finite(g.coverageFraction)
+    and g.coverageFraction > 0 and g.coverageFraction <= 1, "invalid growth coverage")
+  assert(type(observation) == "table" and finite(observation.turn)
+    and observation.turn >= 0 and observation.turn % 1 == 0
+    and finite(observation.scale) and observation.scale > 0, "invalid growth observation clock")
+  local token = observation.resetToken
+  if token == nil then token = "" end
+  assert(type(token) == "string" or finite(token), "invalid growth reset token")
+  local turn, scale = observation.turn, observation.scale
+  local window = M.ScaleTurns(g.windowTurns, scale)
+  local fallbackLog = math.log(1 + g.standardDefault)
+  local fallbackGame = M.SpeedGrowth(g.standardDefault, scale)
+  assert(finite(fallbackGame), "growth scale overflows per-game fallback")
+  local parts = {g.model, type(token), tostring(token)}
+  for _, value in ipairs({g.standardDefault, g.standardMin, g.standardMax, g.windowTurns,
+      g.emaHalfLifeTurns, g.minimumPairs, g.coverageFraction, g.smallWorldPlayers, scale}) do
+    parts[#parts + 1] = string.format("%.17g", value)
+  end
+  local fingerprint = table.concat(parts, "|")
+  local resetReason = ""
+  if previous == nil then resetReason = "initial"
+  elseif not validGrowthState(previous) then resetReason = "invalid_saved_state"
+  elseif previous.fingerprint ~= fingerprint then resetReason = "fingerprint_changed"
+  elseif turn < previous.lastTurn then resetReason = "turn_rewind" end
+  if resetReason ~= "" then previous = nil end
+  local current, complete = {}, observation.complete == true
+  if type(observation.players) ~= "table" then complete = false
+  else
+    local ids = {}
+    for i = 1, #observation.players do
+      local p = observation.players[i]
+      assert(type(p) == "table" and finite(p.id) and p.id >= 0 and p.id % 1 == 0, "invalid growth player ID")
+      for j = 1, #ids do assert(ids[j] ~= p.id, "duplicate growth player ID") end
+      ids[#ids + 1] = p.id
+      if type(p.alive) ~= "boolean" or type(p.isMajor) ~= "boolean" then complete = false
+      elseif p.alive and p.isMajor then
+        local production = p.production
+        if not finite(production) or production < 0 then complete = false; production = 0 end
+        current[#current + 1] = {id = p.id, production = production}
+      end
+    end
+  end
+  table.sort(current, function(a, b) return a.id < b.id end)
+  if previous and turn == previous.lastTurn then
+    local result = growthResultCopy(previous.lastResult)
+    result.duplicate = true
+    return previous, result
+  end
+  local living, required = #current, g.minimumPairs
+  if living == g.smallWorldPlayers then required = living
+  elseif living >= g.minimumPairs then required = math.max(g.minimumPairs, math.ceil(living * g.coverageFraction)) end
+  local state = {fingerprint = fingerprint, firstTurn = previous and previous.firstTurn or turn,
+    lastTurn = turn, emaLog = fallbackLog, history = {}}
+  local reference
+  if previous then
+    for i = 1, #previous.history do
+      local row = previous.history[i]
+      if row.turn >= turn - window then
+        local copy = {turn = row.turn, valid = row.valid, players = {}}
+        for j = 1, #row.players do copy.players[j] = {id = row.players[j].id, production = row.players[j].production} end
+        state.history[#state.history + 1] = copy
+        if row.turn == turn - window then reference = copy end
+      end
+    end
+  end
+  local result = {gameGrowth = fallbackGame, standardGrowth = g.standardDefault, emaLog = fallbackLog,
+    validPairs = 0, livingMajors = living, requiredPairs = required, windowTurns = window,
+    reason = "bootstrap", resetReason = resetReason, duplicate = false, measured = false, alpha = 0}
+  if not complete then result.reason = "invalid_current_observation"
+  elseif living < g.smallWorldPlayers then result.reason = "too_few_living_majors"
+  elseif reference == nil then
+    if turn - state.firstTurn >= window then result.reason = "missing_reference_observation" end
+  elseif not reference.valid then result.reason = "invalid_reference_observation"
+  else
+    local logs = {}
+    for i = 1, #current do
+      local p = current[i]
+      for j = 1, #reference.players do
+        local prior = reference.players[j]
+        if p.id == prior.id and p.production > 0 and prior.production > 0 then
+          logs[#logs + 1] = (math.log(p.production) - math.log(prior.production)) * scale / window
+        end
+      end
+    end
+    result.validPairs = #logs
+    if #logs < required then result.reason = "insufficient_coverage"
+    else
+      result.rawMedianLog = M.Median(logs)
+      local elapsedStandard = (turn - previous.lastTurn) / scale
+      result.alpha = 1 - 2 ^ (-elapsedStandard / g.emaHalfLifeTurns)
+      state.emaLog = (1 - result.alpha) * previous.emaLog + result.alpha * result.rawMedianLog
+      result.emaLog = state.emaLog
+      -- Clipping in log space is equivalent to clipping the published rate and
+      -- prevents exp overflow. Raw state and negative rates remain unmodified.
+      result.standardGrowth = M.Clamp(math.exp(M.Clamp(state.emaLog,
+        math.log(1 + g.standardMin), math.log(1 + g.standardMax))) - 1,
+        g.standardMin, g.standardMax)
+      result.gameGrowth = M.SpeedGrowth(result.standardGrowth, scale)
+      assert(finite(result.gameGrowth), "growth scale overflows per-game measured rate")
+      result.reason, result.measured = "measured", true
+    end
+  end
+  local stored = {turn = turn, valid = complete, players = {}}
+  if complete then stored.players = current end
+  state.history[#state.history + 1] = stored
+  state.lastResult = growthResultCopy(result)
+  return state, result
 end
 
 function M.Median(values)
@@ -72,6 +212,7 @@ function M.NetGPT(goldYield, maintenance)
   return goldYield - maintenance
 end
 
+-- Gold diagnostic only; this aggregate never supplies production growth.
 function M.WorldIncome(players)
   local total, count = 0, 0
   for i = 1, #players do
