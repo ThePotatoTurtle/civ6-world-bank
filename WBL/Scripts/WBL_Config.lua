@@ -59,14 +59,14 @@ WBL_CONFIG = {
     earlyRepayInterestFraction = 0.10, -- Lock at origination; fraction of unmatured interest due on early repayment.
     eraMinimums = {
       ERA_ANCIENT = 100, -- Base credit floor in Standard gold; scale by game-speed CostMultiplier / 100.
-      ERA_CLASSICAL = 200, -- Base credit floor in Standard gold.
-      ERA_MEDIEVAL = 400, -- Base credit floor in Standard gold.
-      ERA_RENAISSANCE = 1000, -- Base credit floor in Standard gold.
-      ERA_INDUSTRIAL = 2000, -- Base credit floor in Standard gold.
-      ERA_MODERN = 3500, -- Base credit floor in Standard gold.
-      ERA_ATOMIC = 5500, -- Base credit floor in Standard gold.
-      ERA_INFORMATION = 8000, -- Base credit floor in Standard gold.
-      ERA_FUTURE = 12000, -- Base credit floor in Standard gold.
+      ERA_CLASSICAL = 150, -- Base credit floor in Standard gold.
+      ERA_MEDIEVAL = 200, -- Base credit floor in Standard gold.
+      ERA_RENAISSANCE = 300, -- Base credit floor in Standard gold.
+      ERA_INDUSTRIAL = 450, -- Base credit floor in Standard gold.
+      ERA_MODERN = 600, -- Base credit floor in Standard gold.
+      ERA_ATOMIC = 750, -- Base credit floor in Standard gold.
+      ERA_INFORMATION = 900, -- Base credit floor in Standard gold.
+      ERA_FUTURE = 1000, -- Base credit floor in Standard gold.
     },
   },
   liquidity = {

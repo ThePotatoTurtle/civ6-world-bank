@@ -15,14 +15,16 @@ Credit limits are 15× net GPT for A, 10× for B and 7.5× for C, with a shared 
 | World era | Minimum credit limit (Standard gold) |
 |---|---:|
 | Ancient | 100 |
-| Classical | 200 |
-| Medieval | 400 |
-| Renaissance | 1,000 |
-| Industrial | 2,000 |
-| Modern | 3,500 |
-| Atomic | 5,500 |
-| Information | 8,000 |
-| Future | 12,000 |
+| Classical | 150 |
+| Medieval | 200 |
+| Renaissance | 300 |
+| Industrial | 450 |
+| Modern | 600 |
+| Atomic | 750 |
+| Information | 900 |
+| Future | 1,000 |
+
+These floors use Standard-speed planning incomes of 20 / 30 / 40 / 60 / 90 / 120 / 150 / 180 / 200 GPT, from Ancient through Future. These are tuning assumptions informed by player reports, not measured era averages. At those incomes, C’s limit is 50% above the floor; A and B have more headroom. Temporary income dips can still make the floor apply, and other speeds need separate balance validation.
 
 For ratings A–C, `creditLimit = max(eraFloor × CostMultiplier / 100, max(0, netGPT) × ratingMultiple)`. The scaled floor is not rounded, and the GPT multipliers remain unchanged across game speeds. Existing outstanding principal counts against this aggregate limit; bank cash, liquidity, lending freezes and all usual borrowing restrictions still apply. Players may borrow less than the ceiling; the floor is not a required minimum loan amount. Production collection and the rating reducer remain unimplemented.
 
@@ -67,5 +69,5 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 - Change: early repayment discounts future interest only and gives no rating upgrade.
 - Balance: selected milestone forgiveness is 10% / 15% / 20% by development tier.
 - Balance: revised credit limits and shared world-era floors scaled by game speed.
-- Balance: era floors start at 100 gold in Ancient and rise more sharply from 1,000 in Renaissance to 12,000 in Future.
+- Balance: lower fixed era floors run from 100 gold in Ancient to 1,000 in Future, keeping income-based credit useful at the stated planning incomes.
 - Fix: recovery from D requires all existing bank debt to be settled, without another loan.
