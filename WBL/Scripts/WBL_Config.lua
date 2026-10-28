@@ -5,7 +5,7 @@ WBL_CONFIG = {
   devVersion = "0.0.0.3", -- Dev version targeting the production version above.
   growth = {
     model = "production_median_log_ema_v1", -- Matched living-major production log growth; no Gold input.
-    standardDefault = 0.025, -- Fallback growth fraction per Standard turn; Leon 2026-10-27.
+    standardDefault = 0.0125, -- Fallback growth fraction per Standard turn; Leon 2026-10-28.
     standardMin = 0, -- Minimum published growth fraction per Standard turn.
     standardMax = 0.05, -- Maximum published growth fraction per Standard turn.
     windowTurns = 20, -- Matched endpoint window in Standard turns; rounded only for game-turn history.
@@ -33,21 +33,21 @@ WBL_CONFIG = {
     },
     DEVELOPED = {
       valueRatio = 1.10, -- Ordinary repayment present value per gold borrowed; Leon 2026-10-28.
-      terms = {20, 30}, -- Payment durations in Standard turns.
+      terms = {10, 20, 30}, -- Payment durations in Standard turns.
       graceTurns = 0, -- Grace duration in Standard turns.
       milestoneForgiveness = 0.10, -- Fraction of remaining principal forgiven for a selected milestone.
       penaltyStrength = 1.25, -- Fraction of base default penalties, excluding garnishing.
     },
     DEVELOPING = {
       valueRatio = 1.00, -- Ordinary repayment present value per gold borrowed; Leon 2026-10-28.
-      terms = {20, 30}, -- Payment durations in Standard turns.
+      terms = {10, 20, 30}, -- Payment durations in Standard turns.
       graceTurns = 3, -- Grace duration in Standard turns.
       milestoneForgiveness = 0.15, -- Fraction of remaining principal forgiven for a selected milestone.
       penaltyStrength = 1.00, -- Fraction of base default penalties, excluding garnishing.
     },
     UNDERDEVELOPED = {
       valueRatio = 0.90, -- Ordinary repayment present value per gold borrowed; Leon 2026-10-28.
-      terms = {20, 30, 40}, -- Payment durations in Standard turns.
+      terms = {10, 20, 30}, -- Payment durations in Standard turns.
       graceTurns = 6, -- Grace duration in Standard turns.
       milestoneForgiveness = 0.20, -- Fraction of remaining principal forgiven for a selected milestone.
       penaltyStrength = 0.75, -- Fraction of base default penalties, excluding garnishing.

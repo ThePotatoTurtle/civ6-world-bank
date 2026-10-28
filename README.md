@@ -6,6 +6,8 @@ The current build contains research tools and tested pure formulas. It does not 
 
 Planned disaster recovery loans replace payment pauses. The dev tools test pricing and Congress data; actual qualification, per-disaster claims and lending remain unimplemented. The approved base value ratios are 1.10 for Developed, 0.90 for Developing and 0.80 for Underdeveloped, with the same tier terms and grace, normal adjustments and 0.80 floor, and a 15 Standard turn claim window. Principal is capped by remaining normal credit and available bank cash.
 
+All three development tiers can choose 10, 20 or 30 Standard-turn terms for ordinary and recovery loans, with their usual grace periods.
+
 Ordinary loans use base value ratios of 1.10 for Developed, 1.00 for Developing and 0.90 for Underdeveloped civs. At 50–99% bank liquidity, the non-investor credit-limit multiplier is 0.75.
 
 Planned default penalties depend on the borrower's development tier. Garnishing is the same for every tier. These penalties are not yet implemented in the playable bank.
@@ -24,7 +26,7 @@ Planned early repayment costs all unpaid principal, overdue interest and arrears
 
 Planned milestone forgiveness is 10% for Developed, 15% for Developing and 20% for Underdeveloped civs. Players choose their goals; already-completed goals are ineligible.
 
-Loan pricing uses each living major civilization’s production growth over 20 Standard turns, takes the median, and smooths it with a 5-Standard-turn half-life before applying the bounds. The default is 2.5% per Standard turn, with a 0% minimum and 5% maximum. On Online speed, those rates are 5.0625%, 0% and 10.25%. Existing loans keep their original rate.
+Loan pricing uses each living major civilization’s production growth over 20 Standard turns, takes the median, and smooths it with a 5-Standard-turn half-life before applying the bounds. The default is 1.25% per Standard turn, with a 0% minimum and 5% maximum. On Online speed, those rates are 2.515625%, 0% and 10.25%. Existing loans keep their original rate.
 
 Credit limits are 15× net GPT for A, 10× for B and 7.5× for C, with a shared world-era minimum scaled by game speed. D allows no new loans. Clearing all arrears ends default penalties; settling all existing bank debt restores C without requiring another loan.
 
@@ -82,7 +84,7 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 - Change: planned disaster recovery pricing replaces unused payment pause settings.
 - Change: early repayment discounts future interest only and gives no rating upgrade.
 - Change: production growth drives loan pricing through a matched-major median and smoothing.
-- Balance: growth defaults to 2.5%, bounded from 0% to 5% per Standard turn.
+- Balance: growth defaults to 1.25%, bounded from 0% to 5% per Standard turn; all tiers can choose 10, 20 or 30 Standard-turn loans.
 - Balance: selected milestone forgiveness is 10% / 15% / 20% by development tier.
 - Balance: revised ordinary loan pricing, liquidity and default penalties; garnishing stays the same across tiers.
 - Balance: revised credit limits and shared world-era floors scaled by game speed.
