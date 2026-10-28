@@ -6,6 +6,20 @@ The current build contains research tools and tested pure formulas. It does not 
 
 Planned disaster recovery loans replace payment pauses. The dev tools test pricing and Congress data; actual qualification, per-disaster claims and lending remain unimplemented. The approved base value ratios are 1.10 for Developed, 0.90 for Developing and 0.80 for Underdeveloped, with the same tier terms and grace, normal adjustments and 0.80 floor, and a 15 Standard turn claim window. Principal is capped by remaining normal credit and available bank cash.
 
+Ordinary loans use base value ratios of 1.10 for Developed, 1.00 for Developing and 0.90 for Underdeveloped civs. At 50–99% bank liquidity, the non-investor credit-limit multiplier is 0.75.
+
+Planned default penalties depend on the borrower's development tier. Garnishing is the same for every tier. These penalties are not yet implemented in the playable bank.
+
+| Penalty | Developed stage 1 / 2 | Developing stage 1 / 2 | Underdeveloped stage 1 / 2 |
+|---|---|---|---|
+| Garnishing, share of positive GPT | 50% / 75% | 50% / 75% | 50% / 75% |
+| Amenities per city | −1 / −3 | −1 / −3 | −1 / −2 |
+| Production per city | −6% / −18% | −5% / −15% | −3% / −11% |
+| Science | −6% / −18% | −5% / −15% | −3% / −11% |
+| Loyalty per city | 0 / −6 | 0 / −5 | 0 / −3 |
+| Diplomatic Favor per turn | 0 / −6 | 0 / −5 | 0 / −3 |
+| Own international trade route yields | −12% / −31% | −10% / −25% | −7% / −18% |
+
 Planned early repayment costs all unpaid principal, overdue interest and arrears fees, plus 10% of future interest. Early closure does not improve the credit rating. Pure settlement helpers are tested; live collection and loan closure remain unimplemented.
 
 Planned milestone forgiveness is 10% for Developed, 15% for Developing and 20% for Underdeveloped civs. Players choose their goals; already-completed goals are ineligible.
@@ -70,6 +84,7 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 - Change: production growth drives loan pricing through a matched-major median and smoothing.
 - Balance: growth defaults to 2.5%, bounded from 0% to 5% per Standard turn.
 - Balance: selected milestone forgiveness is 10% / 15% / 20% by development tier.
+- Balance: revised ordinary loan pricing, liquidity and default penalties; garnishing stays the same across tiers.
 - Balance: revised credit limits and shared world-era floors scaled by game speed.
 - Balance: user-selected fixed era floors run from 100 gold in Ancient to 4,500 in Future at Standard speed, with Classical corrected to 200 Standard / 100 Online.
 - Fix: recovery from D requires all existing bank debt to be settled, without another loan.

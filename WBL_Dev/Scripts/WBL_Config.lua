@@ -32,25 +32,25 @@ WBL_CONFIG = {
       DIFFICULTY_DEITY = 1.25, -- Reference-score divisor; approximate spec seed, pending S12.
     },
     DEVELOPED = {
-      valueRatio = 1.15, -- Repayment present value per gold borrowed; proposed S11.
+      valueRatio = 1.10, -- Ordinary repayment present value per gold borrowed; Leon 2026-10-28.
       terms = {20, 30}, -- Payment durations in Standard turns.
       graceTurns = 0, -- Grace duration in Standard turns.
       milestoneForgiveness = 0.10, -- Fraction of remaining principal forgiven for a selected milestone.
-      penaltyStrength = 1.00, -- Fraction of base default penalty.
+      penaltyStrength = 1.25, -- Fraction of base default penalties, excluding garnishing.
     },
     DEVELOPING = {
-      valueRatio = 1.00, -- Repayment present value per gold borrowed; proposed S11.
+      valueRatio = 1.00, -- Ordinary repayment present value per gold borrowed; Leon 2026-10-28.
       terms = {20, 30}, -- Payment durations in Standard turns.
       graceTurns = 3, -- Grace duration in Standard turns.
       milestoneForgiveness = 0.15, -- Fraction of remaining principal forgiven for a selected milestone.
-      penaltyStrength = 0.75, -- Fraction of base default penalty.
+      penaltyStrength = 1.00, -- Fraction of base default penalties, excluding garnishing.
     },
     UNDERDEVELOPED = {
-      valueRatio = 0.85, -- Repayment present value per gold borrowed; proposed S11.
+      valueRatio = 0.90, -- Ordinary repayment present value per gold borrowed; Leon 2026-10-28.
       terms = {20, 30, 40}, -- Payment durations in Standard turns.
       graceTurns = 6, -- Grace duration in Standard turns.
       milestoneForgiveness = 0.20, -- Fraction of remaining principal forgiven for a selected milestone.
-      penaltyStrength = 0.50, -- Fraction of base default penalty.
+      penaltyStrength = 0.75, -- Fraction of base default penalties, excluding garnishing.
     },
   },
   credit = {
@@ -82,7 +82,7 @@ WBL_CONFIG = {
     tightValueAdjustment = 0.05, -- Non-investor V increase.
     strainedValueAdjustment = 0.10, -- Non-investor V increase.
     normalLimitMultiplier = 1.00, -- Non-investor credit limit fraction.
-    tightLimitMultiplier = 0.80, -- Non-investor credit limit fraction.
+    tightLimitMultiplier = 0.75, -- Non-investor credit limit fraction at 50-99% liquidity.
     strainedLimitMultiplier = 0.50, -- Non-investor credit limit fraction.
     maximumDepositTierImprovement = 1, -- Maximum deposit-driven liquidity tier improvement.
     maximumRivalBenefitFraction = 0.50, -- Maximum rival V benefit / actual investor V benefit; Leon 2026-10-26.
@@ -100,21 +100,21 @@ WBL_CONFIG = {
   },
   penalties = {
     stage1 = {
-      garnishPercent = 50, -- Percent of positive net GPT, capped at treasury and debt.
+      garnishPercent = 50, -- Fixed across tiers; percent of positive net GPT, capped at treasury and debt.
       amenities = -1, -- Amenities per city.
       productionPercent = -5, -- Percent production per city.
       sciencePercent = -5, -- Percent science per player.
       loyalty = 0, -- Loyalty per city per turn.
-      favor = -1, -- Favor per turn, capped at available Favor.
-      tradePercent = 0, -- Percent own international trade route yields.
+      favor = 0, -- Favor per turn, capped at available Favor.
+      tradePercent = -10, -- Percent own international trade route yields.
     },
     stage2 = {
-      garnishPercent = 75, -- Percent of positive net GPT, capped at treasury and debt.
-      amenities = -2, -- Amenities per city.
-      productionPercent = -10, -- Percent production per city.
-      sciencePercent = -10, -- Percent science per player.
-      loyalty = -2, -- Loyalty per city per turn.
-      favor = -2, -- Favor per turn, capped at available Favor.
+      garnishPercent = 75, -- Fixed across tiers; percent of positive net GPT, capped at treasury and debt.
+      amenities = -3, -- Amenities per city.
+      productionPercent = -15, -- Percent production per city.
+      sciencePercent = -15, -- Percent science per player.
+      loyalty = -5, -- Loyalty per city per turn.
+      favor = -5, -- Favor per turn, capped at available Favor.
       tradePercent = -25, -- Percent own international trade route yields.
     },
   },

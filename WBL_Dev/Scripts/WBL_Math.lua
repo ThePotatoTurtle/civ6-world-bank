@@ -487,9 +487,10 @@ function M.Penalties(tier, stage, config)
   local c = configOrDefault(config)
   local source = c.penalties[stage]
   assert(source and c.tiers[tier])
+  assert(finite(source.garnishPercent))
   local strength = c.tiers[tier].penaltyStrength
   return {
-    garnishPercent = M.ScalePenalty(source.garnishPercent, strength),
+    garnishPercent = source.garnishPercent, -- Garnishing is fixed across development tiers.
     amenities = M.ScalePenalty(source.amenities, strength),
     productionPercent = M.ScalePenalty(source.productionPercent, strength),
     sciencePercent = M.ScalePenalty(source.sciencePercent, strength),
