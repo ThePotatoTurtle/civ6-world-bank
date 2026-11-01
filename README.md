@@ -22,6 +22,8 @@ Planned default penalties depend on the borrower's development tier. Garnishing 
 | Diplomatic Favor per turn | 0 / −6 | 0 / −5 | 0 / −3 |
 | Own international trade route yields | −12% / −31% | −10% / −25% | −7% / −18% |
 
+Planned deposits offer a configured cash return and influence. Investor rewards and President eligibility will depend on meaningful eligible capital as well as share; the thresholds and safeguards for loan-funded deposits are still being designed. The current returns are placeholders, and the bank and these safeguards are not implemented yet.
+
 Planned early repayment costs all unpaid principal, overdue interest and arrears fees, plus 10% of future interest. Early closure does not improve the credit rating. Pure settlement helpers are tested; live collection and loan closure remain unimplemented.
 
 Planned milestone forgiveness is 10% for Developed, 15% for Developing and 20% for Underdeveloped civs. Players choose their goals; already-completed goals are ineligible.
@@ -76,6 +78,8 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 ## Update log
 
 ### Unreleased
+
+- Change: planned investor rewards will depend on eligible capital, with deposit returns calibrated against comparable alternatives.
 
 - Feature: development panel and logged API spikes.
 - Feature: pure formula tests and source validation tools.
