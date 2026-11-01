@@ -140,6 +140,7 @@ WBL_CONFIG = {
     maxPerEra = 1, -- Development grant claims per borrower per era.
     infrastructureLimitMultiplier = 1.50, -- Multiple of normal credit limit.
   },
+  -- Share-only investor values. Decisions 29-31 replace this design with eligible capital; not yet implemented.
   investors = {
     depositTerms = {20, 30}, -- Deposit durations in Standard turns.
     depositReturns = {0.05, 0.08}, -- Total return fractions for matching terms; S3 placeholders.

@@ -2,7 +2,7 @@
 
 World Bank Loans is a Civilization VI: Gathering Storm mod in development. The planned bank lends gold to major civilizations and accepts deposits for influence and better borrowing terms.
 
-The current build contains research tools and tested pure formulas. It does not implement a playable bank. The standalone dev mod probes engine APIs in a new single-player game and records PASS, FAIL and PENDING results. Multiplayer is untested; the dev tools refuse multiplayer and hotseat requests.
+The current build contains research tools and offline-tested pure formulas. It does not implement a playable bank. The standalone dev mod probes engine APIs in a new single-player game and records PASS, FAIL and PENDING results. Multiplayer is untested; the dev tools refuse multiplayer and hotseat requests.
 
 Planned disaster recovery loans replace payment pauses. The dev tools test pricing and Congress data; actual qualification, per-disaster claims and lending remain unimplemented. The approved base value ratios are 1.10 for Developed, 0.90 for Developing and 0.80 for Underdeveloped, with the same tier terms and grace, normal adjustments and 0.80 floor, and a 15 Standard turn claim window. Principal is capped by remaining normal credit and available bank cash.
 
@@ -22,7 +22,7 @@ Planned default penalties depend on the borrower's development tier. Garnishing 
 | Diplomatic Favor per turn | 0 / −6 | 0 / −5 | 0 / −3 |
 | Own international trade route yields | −12% / −31% | −10% / −25% | −7% / −18% |
 
-Planned deposits offer a configured cash return and influence. Investor rewards and President eligibility will depend on meaningful eligible capital as well as share; the thresholds and safeguards for loan-funded deposits are still being designed. The current returns are placeholders, and the bank and these safeguards are not implemented yet.
+Planned deposits offer a configured cash return and influence. Only eligible capital counts: deposits minus what the civ owes the bank. Rewards, President eligibility and the cash return scale with it, and civs in arrears or default can't deposit. These rules are decided but not implemented yet, and the current returns are placeholders.
 
 Planned early repayment costs all unpaid principal, overdue interest and arrears fees, plus 10% of future interest. Early closure does not improve the credit rating. Pure settlement helpers are tested; live collection and loan closure remain unimplemented.
 
@@ -46,7 +46,7 @@ Credit limits are 15× net GPT for A, 10× for B and 7.5× for C, with a shared 
 
 For ratings A–C, `creditLimit = max(eraFloor × CostMultiplier / 100, max(0, netGPT) × ratingMultiple)`. The scaled floor is not rounded, and the GPT multipliers remain unchanged across game speeds. Existing outstanding principal counts against this aggregate limit; bank cash, liquidity, lending freezes and all usual borrowing restrictions still apply. Players may borrow less than the ceiling; the floor is not a required minimum loan amount. Production collection and the rating reducer remain unimplemented.
 
-Requires Python 3.11+ with `lupa` for offline checks. The checker explicitly uses Lua 5.1. No ModBuddy is required.
+Requires Python 3.11+ with `lupa` for offline checks. The checker explicitly uses Lua 5.1. No ModBuddy is required. The tools and tests below are maintainer-only and aren't in this repository.
 
 ```powershell
 python tools/sync_dev.py
@@ -79,18 +79,17 @@ The dev panel's **Reload Config** logs include status and version after re-inclu
 
 ### Unreleased
 
-- Change: planned investor rewards will depend on eligible capital, with deposit returns calibrated against comparable alternatives.
-
-- Feature: development panel and logged API spikes.
-- Feature: pure formula tests and source validation tools.
-- Feature: explicit-path installer and exact-file dev package.
-- Feature: nonbinding AI deal inspections and more source-backed engine probes.
+- Change: planned investor rewards, President eligibility and deposit returns depend on eligible capital, with returns calibrated against comparable alternatives; no deposits while in arrears; restructured loans get no investor pricing.
+- New: development panel and logged API spikes.
+- New: pure formula tests and source validation tools.
+- New: explicit-path installer and exact-file dev package.
+- New: nonbinding AI deal inspections and more source-backed engine probes.
 - Change: planned disaster recovery pricing replaces unused payment pause settings.
 - Change: early repayment discounts future interest only and gives no rating upgrade.
 - Change: production growth drives loan pricing through a matched-major median and smoothing.
-- Balance: growth defaults to 1.00%, bounded from 0% to 5% per Standard turn; all tiers can choose 10, 20 or 30 Standard-turn loans.
-- Balance: selected milestone forgiveness is 10% / 15% / 20% by development tier.
-- Balance: revised ordinary loan pricing, liquidity and default penalties; garnishing stays the same across tiers.
-- Balance: revised credit limits and shared world-era floors scaled by game speed.
-- Balance: user-selected fixed era floors run from 100 gold in Ancient to 4,500 in Future at Standard speed, with Classical corrected to 200 Standard / 100 Online.
+- Change: growth defaults to 1.00%, bounded from 0% to 5% per Standard turn; all tiers can choose 10, 20 or 30 Standard-turn loans.
+- Change: selected milestone forgiveness is 10% / 15% / 20% by development tier.
+- Change: revised ordinary loan pricing, liquidity and default penalties; garnishing stays the same across tiers.
+- Change: revised credit limits and shared world-era floors scaled by game speed.
+- Change: user-selected fixed era floors run from 100 gold in Ancient to 4,500 in Future at Standard speed, with Classical corrected to 200 Standard / 100 Online.
 - Fix: recovery from D requires all existing bank debt to be settled, without another loan.
