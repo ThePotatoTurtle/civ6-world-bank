@@ -17,6 +17,8 @@
   <InGameActions>
     <UpdateDatabase id="WBL_DEV_Data" criteria="WBL_DEV_XP2">
       <File>Data/WBL_SpikeModifiers.sql</File>
+      <File>Data/WBL_Penalties.sql</File>
+      <File>Data/WBL_DevNotifications.xml</File>
     </UpdateDatabase>
     <ImportFiles id="WBL_DEV_Imports" criteria="WBL_DEV_XP2">
       <File>Scripts/WBL_Config.lua</File>
@@ -26,6 +28,17 @@
       <File>Scripts/WBL_SpikeAI.lua</File>
       <File>Scripts/WBL_SpikeDisasterRecovery.lua</File>
       <File>UI/WBL_Dev_Deals.lua</File>
+      <File>Scripts/WBL_State.lua</File>
+      <File>Scripts/WBL_Reducer.lua</File>
+      <File>Scripts/WBL_AIPolicy.lua</File>
+      <File>Scripts/WBL_Snapshot.lua</File>
+      <File>Scripts/WBL_Effects.lua</File>
+      <File>Scripts/WBL_SpikeState.lua</File>
+      <File>Scripts/WBL_SpikeTreasury.lua</File>
+      <File>Scripts/WBL_SpikeDistricts.lua</File>
+      <File>Scripts/WBL_SpikeEffects.lua</File>
+      <File>Scripts/WBL_SpikeDryRun.lua</File>
+      <File>UI/WBL_Dev_Telemetry.lua</File>
     </ImportFiles>
     <AddGameplayScripts id="WBL_DEV_Gameplay" criteria="WBL_DEV_XP2">
       <File>Scripts/WBL_Spikes.lua</File>
@@ -36,12 +49,16 @@
     </AddUserInterfaces>
   </InGameActions>
   <LocalizedText>
-    <Text id="LOC_WBL_DEV_TITLE"><en_US>World Bank Loans Dev v0.0.0.3</en_US></Text>
+    <Text id="LOC_WBL_DEV_TITLE"><en_US>World Bank Loans Dev v0.0.0.4</en_US></Text>
     <Text id="LOC_WBL_DEV_TEASER"><en_US>World Bank Loans API spikes. New test games only.</en_US></Text>
-    <Text id="LOC_WBL_DEV_DESCRIPTION"><en_US>Version 0.0.0.3.[NEWLINE]World Bank Loans research tools. Open Bank on the launch bar or press Ctrl+Shift+D. Run All Spikes writes results to Lua.log. AI deal inspections are nonbinding. Requires Gathering Storm. Engine behavior and multiplayer remain unverified. Never enable this in a real game.</en_US></Text>
+    <Text id="LOC_WBL_NOTIFY_LOAN_TAKEN_MESSAGE"><en_US>World Bank Loans dev: adapter notification test</en_US></Text>
+    <Text id="LOC_WBL_NOTIFY_LOAN_TAKEN_SUMMARY"><en_US>Sent by the S9 notify spike through the production adapter.</en_US></Text>
+    <Text id="LOC_WBL_DEV_DESCRIPTION"><en_US>Version 0.0.0.4.[NEWLINE]World Bank Loans research tools. Open Bank on the launch bar or press Ctrl+Shift+D. Run All Spikes writes results to Lua.log. Bank Dry Run logs the in-memory bank pipeline without applying anything. AI deal inspections are nonbinding. Requires Gathering Storm. Engine behavior and multiplayer remain unverified. Never enable this in a real game.</en_US></Text>
   </LocalizedText>
   <Files>
     <File>Data/WBL_SpikeModifiers.sql</File>
+    <File>Data/WBL_Penalties.sql</File>
+    <File>Data/WBL_DevNotifications.xml</File>
     <File>Scripts/WBL_Config.lua</File>
     <File>Scripts/WBL_Math.lua</File>
     <File>Scripts/WBL_SpikeMilestones.lua</File>
@@ -52,5 +69,16 @@
     <File>UI/WBL_Dev_Panel.xml</File>
     <File>UI/WBL_Dev_Panel.lua</File>
     <File>UI/WBL_Dev_Deals.lua</File>
+    <File>Scripts/WBL_State.lua</File>
+    <File>Scripts/WBL_Reducer.lua</File>
+    <File>Scripts/WBL_AIPolicy.lua</File>
+    <File>Scripts/WBL_Snapshot.lua</File>
+    <File>Scripts/WBL_Effects.lua</File>
+    <File>Scripts/WBL_SpikeState.lua</File>
+    <File>Scripts/WBL_SpikeTreasury.lua</File>
+    <File>Scripts/WBL_SpikeDistricts.lua</File>
+    <File>Scripts/WBL_SpikeEffects.lua</File>
+    <File>Scripts/WBL_SpikeDryRun.lua</File>
+    <File>UI/WBL_Dev_Telemetry.lua</File>
   </Files>
 </Mod>

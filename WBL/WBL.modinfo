@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shape follows WBL_Dev/WBL_Dev.modinfo. Gathering Storm id and criterion: GAME/DLC/Expansion2/Expansion2.modinfo:2,11-12;
+     dependency element: GAME/DLC/BlackDeathScenario/BlackDeathScenario.modinfo:11-13. Never enable together with WBL_Dev
+     (both ship Scripts/WBL_Config.lua). -->
+<Mod id="160b9480-3262-44dc-b9e6-f01af511995a" version="1">
+  <Properties>
+    <Name>LOC_WBL_TITLE</Name>
+    <Teaser>LOC_WBL_TEASER</Teaser>
+    <Description>LOC_WBL_DESCRIPTION</Description>
+    <Authors>ThePotatoTurtle</Authors>
+    <AffectsSavedGames>1</AffectsSavedGames>
+    <CompatibleVersions>2.0</CompatibleVersions>
+  </Properties>
+  <Dependencies>
+    <Mod id="4873eb62-8ccc-4574-b784-dda455e74e68" title="Expansion: Gathering Storm"/>
+  </Dependencies>
+  <ActionCriteria>
+    <Criteria id="WBL_XP2"><GameCoreInUse>Expansion2</GameCoreInUse></Criteria>
+  </ActionCriteria>
+  <InGameActions>
+    <UpdateDatabase id="WBL_Data" criteria="WBL_XP2">
+      <File>Data/WBL_Penalties.sql</File>
+      <File>Data/WBL_Notifications.xml</File>
+    </UpdateDatabase>
+    <UpdateText id="WBL_Text" criteria="WBL_XP2">
+      <File>Text/WBL_Text.xml</File>
+      <File>Text/WBL_UI_Text.xml</File>
+    </UpdateText>
+    <ImportFiles id="WBL_Imports" criteria="WBL_XP2">
+      <File>Scripts/WBL_Config.lua</File>
+      <File>Scripts/WBL_Math.lua</File>
+      <File>Scripts/WBL_State.lua</File>
+      <File>Scripts/WBL_Reducer.lua</File>
+      <File>Scripts/WBL_AIPolicy.lua</File>
+      <File>Scripts/WBL_Snapshot.lua</File>
+      <File>Scripts/WBL_Effects.lua</File>
+      <File>Scripts/WBL_BankView.lua</File>
+    </ImportFiles>
+    <AddGameplayScripts id="WBL_Gameplay" criteria="WBL_XP2">
+      <File>Scripts/WBL_Bank.lua</File>
+    </AddGameplayScripts>
+    <AddUserInterfaces id="WBL_UI" criteria="WBL_XP2">
+      <Properties><Context>InGame</Context></Properties>
+      <File>UI/WBL_BankPanel.xml</File>
+    </AddUserInterfaces>
+  </InGameActions>
+  <LocalizedText>
+    <Text id="LOC_WBL_TITLE"><en_US>World Bank Loans</en_US></Text>
+    <Text id="LOC_WBL_TEASER"><en_US>Borrow from a shared World Bank, or invest in it. Early development build, not tested in game yet.</en_US></Text>
+    <Text id="LOC_WBL_DESCRIPTION"><en_US>Version 0.0.0.[NEWLINE]This is an early development build. It hasn't been tested in game yet, so expect bugs and use a throwaway game.[NEWLINE][NEWLINE]Take loans from a shared World Bank and pay them back over time, or deposit gold for a return and investor perks. Your terms depend on your development tier and credit rating. Open Bank on the launch bar or press Ctrl+Shift+B.[NEWLINE][NEWLINE]Made for single player first. Multiplayer is untested. Requires Gathering Storm. Don't enable it together with World Bank Loans Dev.</en_US></Text>
+  </LocalizedText>
+  <Files>
+    <File>Data/WBL_Notifications.xml</File>
+    <File>Data/WBL_Penalties.sql</File>
+    <File>Scripts/WBL_AIPolicy.lua</File>
+    <File>Scripts/WBL_Bank.lua</File>
+    <File>Scripts/WBL_BankView.lua</File>
+    <File>Scripts/WBL_Config.lua</File>
+    <File>Scripts/WBL_Effects.lua</File>
+    <File>Scripts/WBL_Math.lua</File>
+    <File>Scripts/WBL_Reducer.lua</File>
+    <File>Scripts/WBL_Snapshot.lua</File>
+    <File>Scripts/WBL_State.lua</File>
+    <File>Text/WBL_Text.xml</File>
+    <File>Text/WBL_UI_Text.xml</File>
+    <File>UI/WBL_BankPanel.lua</File>
+    <File>UI/WBL_BankPanel.xml</File>
+  </Files>
+</Mod>

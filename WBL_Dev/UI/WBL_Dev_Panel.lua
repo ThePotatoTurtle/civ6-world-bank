@@ -1,6 +1,7 @@
 -- Display, synced requests and dev-only nonbinding deal queries. Local evidence: research/.
 include("WBL_Config")
 include("WBL_Dev_Deals")
+include("WBL_Dev_Telemetry")
 local open = false
 local launch = nil
 local pin = nil
@@ -19,6 +20,7 @@ local function Refresh()
   local canReload = IsSinglePlayer()
   Controls.RunButton:SetDisabled(not canReload or WBL_DEALS.IsBusy())
   Controls.ReloadButton:SetDisabled(not canReload or WBL_DEALS.IsBusy())
+  Controls.DryRunButton:SetDisabled(not canReload or WBL_DEALS.IsBusy())
   Controls.ReloadButton:SetToolTipString(canReload
     and "Re-include the config and log status/version. Reading disk edits is UNVERIFIED."
     or "Reload Config is available only in single player.")
@@ -141,6 +143,7 @@ local function OnUpdate(deltaSeconds)
   local disabled = not IsSinglePlayer() or WBL_DEALS.IsBusy()
   Controls.RunButton:SetDisabled(disabled)
   Controls.ReloadButton:SetDisabled(disabled)
+  Controls.DryRunButton:SetDisabled(disabled)
 end
 
 ContextPtr:SetHide(false)
@@ -153,9 +156,11 @@ Controls.CloseButton:RegisterCallback(Mouse.eLClick, function() SetOpen(false) e
 Controls.FallbackButton:RegisterCallback(Mouse.eLClick, Toggle)
 Controls.RunButton:RegisterCallback(Mouse.eLClick, function() SendRequest("WBL_RunAllSpikes") end)
 Controls.ReloadButton:RegisterCallback(Mouse.eLClick, function() SendRequest("WBL_ReloadConfig") end)
+Controls.DryRunButton:RegisterCallback(Mouse.eLClick, function() SendRequest("WBL_BankDryRun") end)
 Events.LoadGameViewStateDone.Add(OnViewReady)
 Events.GameCoreEventPublishComplete.Add(Refresh)
 Events.PlayerTurnActivated.Add(Refresh)
 Events.DiplomacyStatement.Add(WBL_DEALS.OnStatement)
+if WBL_DEV_TELEMETRY then WBL_DEV_TELEMETRY.Attach() end
 Refresh()
 print("[WBL UI] ready; Ctrl+Shift+D; S7 PENDING")

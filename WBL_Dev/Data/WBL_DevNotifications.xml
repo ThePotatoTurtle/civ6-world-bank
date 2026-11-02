@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dev-only subset of WBL/Data/WBL_Notifications.xml: the single NOTIFICATION_WBL_LOAN_TAKEN row, byte-for-byte the
+     same attributes as production, so the notify spike (WBL_SpikeEffects.lua) exercises the data-type path of
+     WBL_EFFECTS exactly as the bank would. The dev mod defines the two LOC keys in its modinfo. A test keeps the row
+     identical to production. Never load together with the production mod. -->
+<GameInfo>
+	<Types>
+		<Row Type="NOTIFICATION_WBL_LOAN_TAKEN" Kind="KIND_NOTIFICATION"/>
+	</Types>
+	<Notifications>
+		<Row NotificationType="NOTIFICATION_WBL_LOAN_TAKEN" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_LOAN_TAKEN_MESSAGE" Summary="LOC_WBL_NOTIFY_LOAN_TAKEN_SUMMARY"/>
+	</Notifications>
+</GameInfo>

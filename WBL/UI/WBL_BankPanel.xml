@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shape: WBL_Dev/UI/WBL_Dev_Panel.xml (EFV_Dev_Panel.xml:5-63), ClimateScreen.xml scroll panel and instances; research/UI_TOOLING.md. Visual layout is S7 PENDING. -->
+<Context Name="WBL_BankPanel">
+  <GridButton ID="FallbackButton" Anchor="L,T" Offset="12,150" Size="130,32" Style="MainButton" String="LOC_WBL_UI_BUTTON_OPEN" ToolTip="LOC_WBL_UI_BUTTON_TOOLTIP"/>
+  <Container ID="Main" Anchor="C,C" Size="760,600" Hidden="1" ConsumeMouse="1">
+    <Grid Anchor="C,C" Size="760,600" Style="WindowFrameTitle">
+      <Label ID="TitleLabel" Anchor="C,T" Offset="0,12" Style="WindowHeader" String="LOC_WBL_UI_TITLE"/>
+      <Button ID="CloseButton" Anchor="R,T" Offset="-8,-5" Style="CloseButtonLarge"/>
+      <Stack ID="TabStack" Anchor="L,T" Offset="22,48" StackGrowth="Right" StackPadding="8">
+        <GridButton ID="TabBorrow" Size="150,32" Style="MainButton" String="LOC_WBL_UI_TAB_BORROW"/>
+        <GridButton ID="TabLoans" Size="150,32" Style="MainButton" String="LOC_WBL_UI_TAB_LOANS"/>
+        <GridButton ID="TabInvest" Size="150,32" Style="MainButton" String="LOC_WBL_UI_TAB_INVEST"/>
+        <GridButton ID="TabBank" Size="150,32" Style="MainButton" String="LOC_WBL_UI_TAB_BANK"/>
+      </Stack>
+      <Label ID="StatusLabel" Anchor="L,T" Offset="22,88" Style="BodyTextDark14" WrapWidth="716" String=""/>
+      <ScrollPanel ID="BodyScroll" Anchor="L,T" Offset="22,116" Size="716,466" Vertical="1" AutoScrollBar="1">
+        <Stack ID="BodyStack" Anchor="L,T" Offset="0,0" StackGrowth="Bottom" StackPadding="6"/>
+        <ScrollBar Anchor="R,C" Size="11,parent" AnchorSide="O,I" Offset="-15,0" Style="ScrollVerticalBar"/>
+      </ScrollPanel>
+    </Grid>
+  </Container>
+  <Instance Name="HeaderRow">
+    <Label ID="Text" Anchor="L,T" Style="WindowHeader" WrapWidth="690" String=""/>
+  </Instance>
+  <Instance Name="TextRow">
+    <Label ID="Text" Anchor="L,T" Style="BodyTextDark14" WrapWidth="690" String=""/>
+  </Instance>
+  <Instance Name="ActionRow">
+    <Container ID="Root" Anchor="L,T" Size="690,41">
+      <Label ID="Text" Anchor="L,C" Style="BodyTextDark14" WrapWidth="430" String=""/>
+      <GridButton ID="Button" Anchor="R,C" Size="240,38" Style="MainButton" String=""/>
+    </Container>
+  </Instance>
+  <Instance Name="WBL_Bank_LaunchItem">
+    <Button ID="LaunchItemButton" Anchor="L,C" Size="49,49" Texture="LaunchBar_Hook_GreatPeopleButton" Style="ButtonNormalText" TextureOffset="0,-1" StateOffsetIncrement="0,49" ToolTip="LOC_WBL_UI_BUTTON_TOOLTIP">
+      <Label Anchor="C,C" Offset="0,1" Style="FontNormal10" Color="255,230,160,255" String="LOC_WBL_UI_LAUNCH_LABEL"/>
+    </Button>
+  </Instance>
+  <Instance Name="WBL_Bank_LaunchPin">
+    <Image ID="Pin" Anchor="L,C" Offset="0,-2" Size="7,7" Texture="LaunchBar_TrackPip" Color="255,255,255,200"/>
+  </Instance>
+</Context>

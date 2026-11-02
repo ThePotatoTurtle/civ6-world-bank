@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- World Bank Loans notification types (spec 8.4). Structure follows GAME/Base/Assets/Gameplay/Data/Notifications.xml:
+     Types rows with Kind KIND_NOTIFICATION (lines 7-10 pattern; the Kinds row already exists at lines 3-5)
+     and Notifications rows (SeverityType, ExpiresEndOfTurn, AutoNotify, Message, Summary; lines 129-141 pattern).
+     Scripts send via NotificationManager.SendNotification (PiratesScenario_Shared_Script.lua:324-338). -->
+<GameInfo>
+	<Types>
+		<Row Type="NOTIFICATION_WBL_LOAN_TAKEN" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_PAYMENT_MISSED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_ARREARS_WARNING" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_DEFAULT_STAGE1" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_DEFAULT_STAGE2" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_DEFAULT_CLEARED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_RESTRUCTURED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_DEBT_RELIEF" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_MILESTONE_COMPLETE" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_DEPOSIT_MATURED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_WITHDRAWAL" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_PRESIDENT_GAINED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_PRESIDENT_LOST" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_FREEZE_PLACED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_FREEZE_LIFTED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_RECOVERY_OFFER" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_RECOVERY_CLAIMED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_RECOVERY_EXPIRED" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_GRANT_PAID" Kind="KIND_NOTIFICATION"/>
+		<Row Type="NOTIFICATION_WBL_TIER_CHANGED" Kind="KIND_NOTIFICATION"/>
+	</Types>
+	<Notifications>
+		<Row NotificationType="NOTIFICATION_WBL_LOAN_TAKEN" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_LOAN_TAKEN_MESSAGE" Summary="LOC_WBL_NOTIFY_LOAN_TAKEN_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_PAYMENT_MISSED" SeverityType="HIGH" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_PAYMENT_MISSED_MESSAGE" Summary="LOC_WBL_NOTIFY_PAYMENT_MISSED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_ARREARS_WARNING" SeverityType="HIGH" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_ARREARS_WARNING_MESSAGE" Summary="LOC_WBL_NOTIFY_ARREARS_WARNING_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_DEFAULT_STAGE1" SeverityType="VERY_HIGH" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_DEFAULT_STAGE1_MESSAGE" Summary="LOC_WBL_NOTIFY_DEFAULT_STAGE1_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_DEFAULT_STAGE2" SeverityType="VERY_HIGH" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_DEFAULT_STAGE2_MESSAGE" Summary="LOC_WBL_NOTIFY_DEFAULT_STAGE2_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_DEFAULT_CLEARED" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_DEFAULT_CLEARED_MESSAGE" Summary="LOC_WBL_NOTIFY_DEFAULT_CLEARED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_RESTRUCTURED" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_RESTRUCTURED_MESSAGE" Summary="LOC_WBL_NOTIFY_RESTRUCTURED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_DEBT_RELIEF" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_DEBT_RELIEF_MESSAGE" Summary="LOC_WBL_NOTIFY_DEBT_RELIEF_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_MILESTONE_COMPLETE" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_MILESTONE_COMPLETE_MESSAGE" Summary="LOC_WBL_NOTIFY_MILESTONE_COMPLETE_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_DEPOSIT_MATURED" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_DEPOSIT_MATURED_MESSAGE" Summary="LOC_WBL_NOTIFY_DEPOSIT_MATURED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_WITHDRAWAL" SeverityType="LOW" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_WITHDRAWAL_MESSAGE" Summary="LOC_WBL_NOTIFY_WITHDRAWAL_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_PRESIDENT_GAINED" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_PRESIDENT_GAINED_MESSAGE" Summary="LOC_WBL_NOTIFY_PRESIDENT_GAINED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_PRESIDENT_LOST" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_PRESIDENT_LOST_MESSAGE" Summary="LOC_WBL_NOTIFY_PRESIDENT_LOST_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_FREEZE_PLACED" SeverityType="HIGH" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_FREEZE_PLACED_MESSAGE" Summary="LOC_WBL_NOTIFY_FREEZE_PLACED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_FREEZE_LIFTED" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_FREEZE_LIFTED_MESSAGE" Summary="LOC_WBL_NOTIFY_FREEZE_LIFTED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_RECOVERY_OFFER" SeverityType="HIGH" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_RECOVERY_OFFER_MESSAGE" Summary="LOC_WBL_NOTIFY_RECOVERY_OFFER_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_RECOVERY_CLAIMED" SeverityType="LOW" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_RECOVERY_CLAIMED_MESSAGE" Summary="LOC_WBL_NOTIFY_RECOVERY_CLAIMED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_RECOVERY_EXPIRED" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_RECOVERY_EXPIRED_MESSAGE" Summary="LOC_WBL_NOTIFY_RECOVERY_EXPIRED_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_GRANT_PAID" SeverityType="MID" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_GRANT_PAID_MESSAGE" Summary="LOC_WBL_NOTIFY_GRANT_PAID_SUMMARY"/>
+		<Row NotificationType="NOTIFICATION_WBL_TIER_CHANGED" SeverityType="LOW" ExpiresEndOfTurn="False" AutoNotify="False" Message="LOC_WBL_NOTIFY_TIER_CHANGED_MESSAGE" Summary="LOC_WBL_NOTIFY_TIER_CHANGED_SUMMARY"/>
+	</Notifications>
+</GameInfo>

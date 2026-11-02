@@ -1,36 +1,47 @@
 # World Bank Loans
 
-World Bank Loans is a Civilization VI: Gathering Storm mod in development. The planned bank lends gold to major civilizations and accepts deposits for influence and better borrowing terms.
+World Bank Loans is a Civilization VI: Gathering Storm mod. It adds a neutral World Bank. Major civs can borrow gold and pay it back over time, or deposit gold to earn a return and some political perks.
 
-The current build contains research tools and offline-tested pure formulas. It does not implement a playable bank. The standalone dev mod probes engine APIs in a new single-player game and records PASS, FAIL and PENDING results. Multiplayer is untested; the dev tools refuse multiplayer and hotseat requests.
+**This is an early development build. It has not been run in game yet.** Expect bugs and use a throwaway game. It's built for single player first. Multiplayer is untested. Everything below describes how the mod is meant to work, not something I've seen work.
 
-Planned disaster recovery loans replace payment pauses. The dev tools test pricing and Congress data; actual qualification, per-disaster claims and lending remain unimplemented. The approved base value ratios are 1.10 for Developed, 0.90 for Developing and 0.80 for Underdeveloped, with the same tier terms and grace, normal adjustments and 0.80 floor, and a 15 Standard turn claim window. Principal is capped by remaining normal credit and available bank cash.
+## Install
 
-All three development tiers can choose 10, 20 or 30 Standard-turn terms for ordinary and recovery loans, with their usual grace periods.
+There's no Workshop release yet.
 
-Ordinary loans use base value ratios of 1.10 for Developed, 1.00 for Developing and 0.90 for Underdeveloped civs. At 50–99% bank liquidity, the non-investor credit-limit multiplier is 0.75.
+1. Copy the `WBL` folder into your Civilization VI `Mods` folder. Windows may redirect Documents, so check where your Mods folder really is.
+2. Quit the game first, then start it and enable **World Bank Loans** in Additional Content.
+3. Start a new Gathering Storm game.
 
-Planned default penalties depend on the borrower's development tier. Garnishing is the same for every tier. These penalties are not yet implemented in the playable bank.
+Don't enable World Bank Loans and `WBL_Dev` at the same time. They share script names and game properties and will clash. `WBL_Dev` is the research mod I use to test engine calls. Most players don't need it.
 
-| Penalty | Developed stage 1 / 2 | Developing stage 1 / 2 | Underdeveloped stage 1 / 2 |
-|---|---|---|---|
-| Garnishing, share of positive GPT | 50% / 75% | 50% / 75% | 50% / 75% |
-| Amenities per city | −1 / −3 | −1 / −3 | −1 / −2 |
-| Production per city | −6% / −18% | −5% / −15% | −3% / −11% |
-| Science | −6% / −18% | −5% / −15% | −3% / −11% |
-| Loyalty per city | 0 / −6 | 0 / −5 | 0 / −3 |
-| Diplomatic Favor per turn | 0 / −6 | 0 / −5 | 0 / −3 |
-| Own international trade route yields | −12% / −31% | −10% / −25% | −7% / −18% |
+## Using it
 
-Planned deposits offer a configured cash return and influence. Only eligible capital counts: deposits minus what the civ owes the bank. Rewards, President eligibility and the cash return scale with it, and civs in arrears or default can't deposit. These rules are decided but not implemented yet, and the current returns are placeholders.
+Open the bank with **Ctrl+Shift+B** or the World Bank button on the launch bar. The panel has four tabs: Borrow, My loans, Invest and Bank.
 
-Planned early repayment costs all unpaid principal, overdue interest and arrears fees, plus 10% of future interest. Early closure does not improve the credit rating. Pure settlement helpers are tested; live collection and loan closure remain unimplemented.
+- **Borrow:** loans, grants and milestone loans, with the terms shown before you accept.
+- **My loans:** repayment, early repayment, restructuring and debt relief.
+- **Invest:** deposits, your eligible capital, shares and the President.
+- **Bank:** cash, liquidity, ratings and freezes.
 
-Planned milestone forgiveness is 10% for Developed, 15% for Developing and 20% for Underdeveloped civs. Players choose their goals; already-completed goals are ineligible.
+AI civs borrow too, using simple rules.
 
-Loan pricing uses each living major civilization’s production growth over 20 Standard turns, takes the median, and smooths it with a 5-Standard-turn half-life before applying the bounds. The default is 1.00% per Standard turn, with a 0% minimum and 5% maximum. On Online speed, those rates are 2.01%, 0% and 10.25%. Existing loans keep their original rate.
+## Loans
 
-Credit limits are 15× net GPT for A, 10× for B and 7.5× for C, with a shared world-era minimum scaled by game speed. D allows no new loans. Clearing all arrears ends default penalties; settling all existing bank debt restores C without requiring another loan.
+Your development tier sets your terms. It compares your techs and civics with a smoothed median of the other civs. Loan terms lock when you take the loan.
+
+- Ordinary loans use base value ratios of 1.10 for Developed, 1.00 for Developing and 0.90 for Underdeveloped civs. The value ratio is what the repayments are worth per gold you borrow.
+- All three tiers can pick 10, 20 or 30 Standard-turn terms. Grace periods are 0, 3 and 6 turns.
+- Credit rating, bank liquidity, a credit scar and investor status adjust the price. The value ratio never drops below 0.80.
+- At 50 to 99% bank liquidity, the non-investor credit-limit multiplier is 0.75.
+- Developing civs can take infrastructure loans, and Underdeveloped civs can claim a development grant once per era. Both need a milestone.
+- Milestones are goals you pick, like a district, city population or a tech. Finishing one early forgives part of the remaining principal: 10% for Developed, 15% for Developing and 20% for Underdeveloped. Goals you've already completed don't count.
+- Early repayment costs all unpaid principal, overdue interest and arrears fees, plus 10% of future interest. Early closure does not improve your credit rating.
+
+Loan pricing uses each living major civilization's production growth over 20 Standard turns, takes the median, and smooths it with a 5-Standard-turn half-life before applying the bounds. The fallback is 1.00% per Standard turn, with a 0% minimum and 5% maximum. On Online speed, those rates are 2.01%, 0% and 10.25%. Existing loans keep their original rate.
+
+### Credit limits
+
+Credit limits are 15x net GPT for A, 10x for B and 7.5x for C, with a shared world-era minimum scaled by game speed. D allows no new loans. New civs start at B. Three missed payments on one loan drop the rating one grade, and default sets D.
 
 | World era | Minimum credit limit (Standard gold) | Minimum credit limit (Online gold) |
 |---|---:|---:|
@@ -44,52 +55,77 @@ Credit limits are 15× net GPT for A, 10× for B and 7.5× for C, with a shared 
 | Information | 3,000 | 1,500 |
 | Future | 4,500 | 2,250 |
 
-For ratings A–C, `creditLimit = max(eraFloor × CostMultiplier / 100, max(0, netGPT) × ratingMultiple)`. The scaled floor is not rounded, and the GPT multipliers remain unchanged across game speeds. Existing outstanding principal counts against this aggregate limit; bank cash, liquidity, lending freezes and all usual borrowing restrictions still apply. Players may borrow less than the ceiling; the floor is not a required minimum loan amount. Production collection and the rating reducer remain unimplemented.
+For ratings A to C, `creditLimit = max(eraFloor x CostMultiplier / 100, max(0, netGPT) x ratingMultiple)`. The scaled floor isn't rounded and the GPT multipliers stay the same across game speeds. Outstanding principal counts against the limit. Bank cash, liquidity, lending freezes and the usual borrowing restrictions still apply. You can borrow less than the limit. The floor isn't a minimum loan.
 
-Requires Python 3.11+ with `lupa` for offline checks. The checker explicitly uses Lua 5.1. No ModBuddy is required. The tools and tests below are maintainer-only and aren't in this repository.
+### Disaster recovery loans
 
-```powershell
-python tools/sync_dev.py
-python tools/generate_spike_sql.py
-python tools/check_all.py
-python tests/offline/run_tests.py
-```
+These are planned and **currently dormant**. They replace payment pauses. The mod can't yet tell for sure which disasters qualify for a World Congress aid request, so it won't guess. They stay off until that check is verified in game. The design: one optional loan per hit civ, base value ratios of 1.10 / 0.90 / 0.80 for Developed / Developing / Underdeveloped, a 15 Standard-turn claim window, capped by your remaining normal credit and the bank's cash.
 
-The checker verifies Lua syntax, manifests, localization, source-backed API calls, numeric constants and generated-file parity. It validates experimental SQL in an in-memory copy of the installed game's debug database. It never modifies the live database. The clone skips the game's hash-maintenance triggers because ordinary SQLite lacks `Make_Hash`; game-generated hashes and engine behavior require an in-game check.
+## Missed payments and default
 
-Install the dev mod only after confirming the actual Mods folder. Windows may redirect Documents. The installer requires an explicit existing folder and refuses to run while Civilization VI is open. Start with a dry run:
+- Payments come out of your gold at turn start, oldest loan first. If you're short, you pay what you have and the rest becomes arrears. Gold never goes below 0.
+- Arrears grow by a 5% fee per Standard turn, simple, never on fees. The fee and all the clocks below scale with game speed.
+- Any arrears block new loans and new deposits.
+- After 7 Standard turns of arrears you get a warning. After 10 you're in default, your rating drops to D and unpaid milestone forgiveness is cancelled. Stage 2 starts on default turn 11.
+- Before default, the bank takes what it's owed from your gold. **While in default, it stops sweeping your treasury.** Instead each turn it garnishes a share of your positive net GPT (50% in stage 1, 75% in stage 2), arrears first, then scheduled payments. You keep the rest and your existing treasury.
+- Default ends when all arrears across all loans are cleared. Rating D returns to C once all arrears and all bank debt are settled. No new loan is needed.
+- Restructuring (once per loan) rolls arrears and remaining principal into a new 30 Standard-turn loan with no grace. It costs 50 Favor, or all you have, and drops your rating one grade. A restructured loan gets no investor discount.
+- Debt relief (Underdeveloped only, once per game): finish a milestone within 15 Standard turns to forgive 50% of your debt and arrears. Garnishing continues meanwhile, but the other penalties pause.
 
-```powershell
-./tools/install.ps1 -ModsPath 'C:\your\confirmed\Mods' -DevOnly -DryRun
-./tools/install.ps1 -ModsPath 'C:\your\confirmed\Mods' -DevOnly
-```
+### Default penalties
 
-Use a new Gathering Storm single-player game at Standard speed with at least three AIs and only the dev mod enabled. Open **Bank** on the launch bar or press **Ctrl+Shift+D**, then click **Run All Spikes**. The fallback **World Bank Dev** button appears if the launch bar cannot attach. Wait until S3 says its queries are complete, stopped or timed out before ending the first turn. Nonbinding AI inspections may display diplomacy views; the tool never accepts a trade. It preserves existing negotiations and logs missing or unsafe samples as pending. The city probe selects its city after one turn; the second turn removes its experimental effects. Quit to desktop before reading Lua.log, because the game buffers it.
+Garnishing is the same for every tier. The other penalties are scaled by tier (1.25 for Developed, 1.00 for Developing, 0.75 for Underdeveloped). Nothing destroys cities or units, and everything lifts when the arrears are cleared.
 
-```powershell
-python tools/summarize_log.py 'C:\path\to\Lua.log'
-python tools/package.py --output dist/World_Bank_Loans_Dev_0.0.0.3.zip
-```
+| Penalty | Developed stage 1 / 2 | Developing stage 1 / 2 | Underdeveloped stage 1 / 2 |
+|---|---|---|---|
+| Garnishing, share of positive GPT | 50% / 75% | 50% / 75% | 50% / 75% |
+| Amenities per city | −1 / −3 | −1 / −3 | −1 / −2 |
+| Production per city | −6% / −18% | −5% / −15% | −3% / −11% |
+| Science | −6% / −18% | −5% / −15% | −3% / −11% |
+| Loyalty per city | 0 / −6 | 0 / −5 | 0 / −3 |
+| Diplomatic Favor per turn | 0 / −6 | 0 / −5 | 0 / −3 |
+| Own international trade route yields | −12% / −31% | −10% / −25% | −7% / −18% |
 
-Packages contain the modinfo and exactly its listed files. Generated dev copies of the config and formulas must match their single sources in `WBL/Scripts` byte for byte.
+## Investing
 
-The dev panel's **Reload Config** logs include status and version after re-including the config in single player. Reading edits from disk during a running game remains unverified. The first session also leaves AI deal rates, Congress disaster eligibility, reversible penalties, perk writers and long-run balance pending where evidence is incomplete. The production bank UI and synced finance requests follow those checks.
+- Any major civ can deposit gold for 20 or 30 Standard turns, except while in arrears or default.
+- Only **eligible capital** counts: your active deposits minus what you owe the bank. Recent forgiveness, debt relief and grants also count against you for 30 Standard turns. Rewards, President eligibility and your cash return all scale with it.
+- At maturity you get your full principal back plus the return earned on the eligible part. If you have arrears, the payout clears those first. Early withdrawal gives back 90% of the deposit and no return, and also pays arrears first.
+- Deposit returns (5% for 20 turns, 8% for 30) are placeholders and not tuned.
+- Perks: Diplomatic Favor from your share, a cheaper own-loan price and a credit extension, shared Favor when the bank lends to others, and Era Score. Each one needs enough eligible capital, not just a big share.
+- The **President** is the largest eligible depositor with at least a 25% share and enough capital held for 3 turns. They get extra Favor, Great Merchant points and envoys, can see every civ's debts, and can freeze one enemy at war.
+- Allied investors at war with a civ, holding at least 40% of the eligible share together and enough eligible capital, can freeze new loans and grants to it for as long as that war lasts. There is no separate vote.
+
+## What's unverified
+
+Some effects are attempted in game but I haven't confirmed the game accepts them. If one fails, the mod logs it and shows the reward as unpaid.
+
+- Diplomatic Favor changes, Era Score, envoys and Great Merchant points.
+- Default penalties other than garnishing (amenities, production, science, loyalty and trade yields).
+- AI borrowing.
+- Notifications, saving and loading bank state, and whether district milestones can be detected.
+- Disaster recovery loans (dormant, see above).
+- The UI layout, and everything in multiplayer.
+
+Full rules are in the spec and decision log, and every tunable number is in [WBL_Config.lua](WBL/Scripts/WBL_Config.lua).
 
 ## Update log
 
 ### Unreleased
 
-- Change: planned investor rewards, President eligibility and deposit returns depend on eligible capital, with returns calibrated against comparable alternatives; no deposits while in arrears; restructured loans get no investor pricing.
-- New: development panel and logged API spikes.
-- New: pure formula tests and source validation tools.
-- New: explicit-path installer and exact-file dev package.
-- New: nonbinding AI deal inspections and more source-backed engine probes.
+- New: production mod `WBL` with a bank panel (Ctrl+Shift+B or launch bar), loans, repayment, arrears, default, restructuring, debt relief, milestones, grants, deposits, the President, lending freezes and AI borrowing. Not run in game yet.
+- New: dev mod now exercises the same adapters the production mod uses, plus a bank dry run.
+- New: packaging and install tools handle both `WBL` and `WBL_Dev`.
+- Change: in default, the bank garnishes positive GPT instead of sweeping the treasury.
+- Change: the arrears fee is 5% per Standard turn, and the warning, default and stage 2 clocks scale with game speed.
+- Change: deposit rewards, returns and President eligibility depend on eligible capital. No deposits while in arrears or default.
+- Change: payouts from maturing and early-withdrawn deposits go to arrears first.
+- Change: restructured loans get a fresh quote with the rating drop and any scar, and no investor pricing.
+- Change: the bank's cash reserve and development grants scale with the world-era credit floor.
+- Change: Favor, Era Score, envoys, Great Merchant points and non-garnish penalties are attempted live and logged. Disaster recovery loans stay dormant until the qualifying-disaster check is verified.
 - Change: planned disaster recovery pricing replaces unused payment pause settings.
 - Change: early repayment discounts future interest only and gives no rating upgrade.
-- Change: production growth drives loan pricing through a matched-major median and smoothing.
-- Change: growth defaults to 1.00%, bounded from 0% to 5% per Standard turn; all tiers can choose 10, 20 or 30 Standard-turn loans.
-- Change: selected milestone forgiveness is 10% / 15% / 20% by development tier.
-- Change: revised ordinary loan pricing, liquidity and default penalties; garnishing stays the same across tiers.
-- Change: revised credit limits and shared world-era floors scaled by game speed.
-- Change: user-selected fixed era floors run from 100 gold in Ancient to 4,500 in Future at Standard speed, with Classical corrected to 200 Standard / 100 Online.
+- Change: production growth drives loan pricing through a matched-major median and smoothing, defaulting to 1.00% per Standard turn.
+- Change: all tiers can choose 10, 20 or 30 Standard-turn loans. Milestone forgiveness is 10% / 15% / 20% by tier.
+- Change: revised ordinary loan pricing, liquidity, default penalties, credit limits and world-era floors.
 - Fix: recovery from D requires all existing bank debt to be settled, without another loan.

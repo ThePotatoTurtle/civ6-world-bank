@@ -2,16 +2,32 @@
 -- Every mutation runs from a synchronized GameEvents handler and refuses multiplayer.
 include("WBL_Config");
 include("WBL_Math");
+include("WBL_State");
+include("WBL_Snapshot");
+include("WBL_Effects");
 include("WBL_SpikePlayerEffects");
 include("WBL_SpikeMilestones");
 include("WBL_SpikeAI");
 include("WBL_SpikeDisasterRecovery");
+include("WBL_SpikeState");
+include("WBL_SpikeTreasury");
+include("WBL_SpikeDistricts");
+include("WBL_SpikeEffects");
+include("WBL_SpikeDryRun");
 
 local RUN_KEY = "WBL_SPIKE_RUN";
 local STATUS_KEY = "WBL_SPIKE_STATUS";
 local FLAG_KEY = "WBL_SPIKE_CITY_ACTIVE";
 local GROWTH_KEY = "WBL_SPIKE_PRODUCTION_GROWTH";
 local GROWTH_RESET_KEY = "WBL_SPIKE_PRODUCTION_RESET";
+-- Scalar per-major counts for the UI-side S2 cross-check (WBL_Dev_Telemetry.lua reads this property).
+local TELEMETRY_KEY = "WBL_SPIKE_TELEMETRY";
+
+-- S10 store injected into the pure state probe so the same code can also run read-only in the UI.
+local STATE_STORE = {
+  get = function(key) return Game:GetProperty(key); end,
+  set = function(key, value) Game:SetProperty(key, value); end,
+};
 
 local function Read(fn)
   local ok, value = pcall(fn);
@@ -47,7 +63,7 @@ local function ValidConfig(config)
     for _, name in ipairs({ "goldDelta", "goldSafetyReserve", "aiGrant", "favorDelta", "envoyDelta", "eraScoreDelta", "merchantPointsDelta", "populationDelta", "epsilon" }) do
       assert(finite(config.spikes[name]) and config.spikes[name] >= 0, "invalid_" .. name);
     end
-    for _, name in ipairs({ "logEveryTurns", "difficultyLogEveryTurns", "observationTurns", "standardAutoplayTurns", "onlineAutoplayTurns", "milestoneObservationTurns" }) do
+    for _, name in ipairs({ "logEveryTurns", "difficultyLogEveryTurns", "observationTurns", "standardAutoplayTurns", "onlineAutoplayTurns", "milestoneObservationTurns", "dryRunTurns" }) do
       local value = config.spikes[name];
       assert(finite(value) and value > 0 and value % 1 == 0, "invalid_" .. name);
     end
@@ -247,7 +263,7 @@ local function ProbeLog(run)
   end;
 end
 
-local function ClearFlag(run)
+local function ClearS4Flag(run)
   if run.effects then return WBL_SPIKE_PLAYER_EFFECTS.Clear(run.effects, ProbeLog(run)); end
   if run.plotIndex == nil then return true; end
   local ok, err = pcall(function()
@@ -257,6 +273,14 @@ local function ClearFlag(run)
   end);
   if not ok then Log(run, "S4", "rollback_flag", err, "flag_zero", "FAIL"); end
   return ok;
+end
+
+-- S4 fixture flags plus the adapter penalty level (WBL_SpikeEffects): both must be off after any stop.
+local function ClearFlag(run)
+  local s4Clear = ClearS4Flag(run);
+  local adapterClear = true;
+  if WBL_SPIKE_EFFECTS then adapterClear = WBL_SPIKE_EFFECTS.Clear(run, ProbeLog(run)); end
+  return s4Clear and adapterClear;
 end
 
 local function StartCityCandidate(run, player)
@@ -374,6 +398,11 @@ local function ObserveEconomy(run, turn)
       Log(run, "S11", "production_player_" .. player:GetID(), err, "snapshot_readable", "PENDING");
     end
   end
+  local counts = {};
+  for _, snapshot in ipairs(snapshots) do
+    counts[#counts + 1] = { id = snapshot.playerID, techs = snapshot.techs, civics = snapshot.civics };
+  end
+  Game:SetProperty(TELEMETRY_KEY, { turn = turn, runID = run.runID, players = counts });
   local goldAverage = #living > 0 and goldReadable == #living and IsFinite(goldTotal) and goldTotal / #living or nil;
   local productionAverage = #living > 0 and productionReadable == #living and IsFinite(productionTotal) and productionTotal / #living or nil;
   if type(run.history) ~= "table" then run.history = {}; end
@@ -459,6 +488,11 @@ function WBL_RunAllSpikes(ePlayer, params)
     Log(run, "S10", "property_roundtrip", readback and readback.runID, run.runID,
       readback and readback.runID == run.runID and "PASS" or "FAIL");
     Log(run, "S10", "save_reload_mp", "not_exercised", "new_game_save_reload_and_MP_session", "PENDING");
+    if WBL_SPIKE_STATE then
+      WBL_SPIKE_STATE.Run(STATE_STORE, turn, run.runID, ProbeLog(run), WBL_CONFIG);
+    else
+      Log(run, "S10", "state_helper", "missing", "WBL_SpikeState_imported", "PENDING");
+    end
     Relationships(run);
     Log(run, "S7", "launch_bar", "request_reached_gameplay", "visible_working_launch_bar_entry_LOOK", "PENDING");
     StartCityCandidate(run, player);
@@ -469,11 +503,26 @@ function WBL_RunAllSpikes(ePlayer, params)
     PendingPlayerPerks(run, player);
     OneShotGrants(run, player);
     WBL_SPIKE_PLAYER_EFFECTS.EstablishContact(player, ProbeLog(run));
+    -- S4/S9 through the exact production adapters (decision 33). Gold/favor round trips restore before the S1 timing seed below.
+    if WBL_SPIKE_EFFECTS then
+      WBL_SPIKE_EFFECTS.Run(run, player, WBL_CONFIG, ProbeLog(run));
+    else
+      Log(run, "S4", "adapter_helper", "missing", "WBL_SpikeEffects_imported", "PENDING");
+    end
     Log(run, "S3", "deal_rate", "UI_matrix_observation_separate",
       "AI_gold_GPT_acceptability_samples_from_UI_probe", "PENDING");
     Log(run, "S5", "recovery_probe_scheduled", "next_synced_OnGameTurnStarted",
       "pre_vote_aid_merit_original_disaster_ID_and_affected_major_evidence", "PENDING");
     run.aiProbe = WBL_SPIKE_AI.Run(Majors(), WBL_CONFIG, ProbeLog(run));
+    -- S1 timing: seed after every fixture credit above so later deltas are income, not fixture cash.
+    if WBL_SPIKE_TREASURY then
+      if WBL_SPIKE_TREASURY.Begin(run, turn, WBL_CONFIG.spikes.treasuryTimingTurns, ProbeLog(run)) then
+        WBL_SPIKE_TREASURY.Sample(Majors(), "RunStart", turn, run, ProbeLog(run), WBL_CONFIG.spikes.epsilon);
+      end
+    else
+      Log(run, "S1", "timing_helper", "missing", "WBL_SpikeTreasury_imported", "PENDING");
+    end
+    if WBL_SPIKE_DISTRICTS then WBL_SPIKE_DISTRICTS.Reset(); end
     Log(run, "S11", "growth_scheduled", "next_synced_OnGameTurnStarted",
       "production_only_estimator_observation_no_button_sample", "PENDING");
     Log(run, "S11", "growth_tuning", "telemetry_scheduled", "representative_speed_histories", "PENDING");
@@ -487,6 +536,43 @@ function WBL_RunAllSpikes(ePlayer, params)
   else
     Publish(run, "OBSERVING", "End turn once for applied city candidate, twice for removal. Unresolved APIs remain pending.");
   end
+end
+
+-- S13: in-memory production pipeline on a dev-only state (WBL_SpikeDryRun.lua). Never applies effects and
+-- never touches the production state property; refuses multiplayer like every other spike.
+local function DryRunLog(run)
+  return function(spike, variant, actual, expected, result, detail)
+    Log(run, spike, variant, actual, expected, result, detail);
+  end;
+end
+
+function WBL_BankDryRun(ePlayer, params)
+  if not IsSinglePlayer() then
+    print("[SPIKE GUARD] player=" .. Text(ePlayer) .. " bank_dry_run multiplayer_or_unknown_context REJECTED");
+    return;
+  end
+  local player = Players[ePlayer];
+  if player == nil or not player:IsHuman() then
+    print("[SPIKE GUARD] bank_dry_run invalid_request_actor REJECTED");
+    return;
+  end
+  if WBL_SPIKE_DRYRUN == nil then
+    print("[SPIKE S13] variant=dryrun_helper actual=missing expected=WBL_SpikeDryRun_imported PENDING");
+    return;
+  end
+  local ok, err = pcall(function()
+    local run, reason = WBL_SPIKE_DRYRUN.Begin(STATE_STORE, ePlayer, Game.GetCurrentGameTurn(), WBL_CONFIG, DryRunLog);
+    if run == nil then print("[SPIKE GUARD] bank_dry_run " .. Text(reason) .. " REJECTED"); end
+  end);
+  if not ok then print("[SPIKE S13] variant=dryrun_error actual=" .. Text(err) .. " expected=begin_complete FAIL"); end
+end
+
+local function DryRunTurn(turn)
+  if not IsSinglePlayer() or WBL_SPIKE_DRYRUN == nil then return; end
+  local ok, err = pcall(function()
+    WBL_SPIKE_DRYRUN.Turn(STATE_STORE, Game.GetCurrentGameTurn(), WBL_CONFIG, DryRunLog);
+  end);
+  if not ok then print("[SPIKE S13] variant=dryrun_error actual=" .. Text(err) .. " expected=turn_complete FAIL"); end
 end
 
 function WBL_ReloadConfig(ePlayer, params)
@@ -519,6 +605,8 @@ end
 
 local function OnGameTurnStarted(turn)
   if not IsSinglePlayer() then return; end
+  -- S13 runs from this same synced hook so it shares the existing turn ordering; its own run record gates it.
+  DryRunTurn(turn);
   local run = Game:GetProperty(RUN_KEY);
   if run == nil then return; end
   local configOK, configError = ValidConfig(WBL_CONFIG);
@@ -549,12 +637,24 @@ local function OnGameTurnStarted(turn)
     local elapsed = now - run.startTurn;
     local horizon = run.speedType == "GAMESPEED_ONLINE" and WBL_CONFIG.spikes.onlineAutoplayTurns or WBL_CONFIG.spikes.standardAutoplayTurns;
     if elapsed > horizon and run.summaryPrinted then return; end
+    if WBL_SPIKE_TREASURY then
+      WBL_SPIKE_TREASURY.Sample(Majors(), "OnGameTurnStarted", now, run, ProbeLog(run), WBL_CONFIG.spikes.epsilon);
+      WBL_SPIKE_TREASURY.Close(run, now, ProbeLog(run));
+    end
     if elapsed <= horizon then
       ObserveEconomy(run, now);
       if run.aiProbe then run.aiProbe = WBL_SPIKE_AI.Observe(Majors(), run.aiProbe, WBL_CONFIG, ProbeLog(run)); end
     end
     Relationships(run);
+    if WBL_SPIKE_DISTRICTS and elapsed <= horizon then
+      WBL_SPIKE_DISTRICTS.Observe(Majors(), GameInfo.Districts, now, ProbeLog(run));
+    end
+    if WBL_SPIKE_STATE and elapsed <= horizon then
+      WBL_SPIKE_STATE.Turn(STATE_STORE, now, run.runID, ProbeLog(run), WBL_CONFIG);
+    end
     run.disasterProbe = WBL_SPIKE_DISASTER_RECOVERY.Observe(Majors(), run.disasterProbe, now, ProbeLog(run));
+    -- Adapter penalty sequence starts after S4 removal and mutates run.adapterFx, which the branch below saves.
+    if WBL_SPIKE_EFFECTS and run.adapterFx then WBL_SPIKE_EFFECTS.Turn(run, now, WBL_CONFIG, ProbeLog(run)); end
     if run.milestones and not run.milestones.completed then
       run.milestones = WBL_SPIKE_MILESTONES.Observe(Players[run.playerID], CandidateCity(run), run.milestones, WBL_CONFIG, ProbeLog(run));
     end
@@ -583,11 +683,36 @@ local function OnGameTurnStarted(turn)
   end
 end
 
+-- S1: per-player hooks. They only read, only inside the run's sampling window, and never mutate state.
+local function TreasuryHook(phase)
+  return function(playerID)
+    if not IsSinglePlayer() or WBL_SPIKE_TREASURY == nil then return; end
+    local run = Game:GetProperty(RUN_KEY);
+    local now = Game.GetCurrentGameTurn();
+    if run == nil or not WBL_SPIKE_TREASURY.Active(run, now) then return; end
+    local ok, err = pcall(function()
+      WBL_SPIKE_TREASURY.Sample(Majors(), phase, now, run, ProbeLog(run), WBL_CONFIG.spikes.epsilon, playerID);
+    end);
+    if not ok then Log(run, "S1", "timing_" .. phase .. "_error", err, "readable_treasury", "PENDING"); end
+  end;
+end
+
 GameEvents.WBL_RunAllSpikes.Add(WBL_RunAllSpikes);
 GameEvents.WBL_ReloadConfig.Add(WBL_ReloadConfig);
+GameEvents.WBL_BankDryRun.Add(WBL_BankDryRun);
 GameEvents.OnGameTurnStarted.Add(OnGameTurnStarted);
+GameEvents.PlayerTurnStarted.Add(TreasuryHook("PlayerTurnStarted"));
+GameEvents.PlayerTurnStartComplete.Add(TreasuryHook("PlayerTurnStartComplete"));
 local resumed = Game:GetProperty(RUN_KEY);
 if resumed then
   print("[SPIKE S10] loaded_property run=" .. Text(resumed.runID) .. " lastTurn=" .. Text(resumed.lastTurn) ..
     " actual=present expected=saved_marker PENDING save_reload_origin_not_proven");
+end
+if WBL_SPIKE_STATE then
+  -- Compare this line with the last per-turn state_checksum before the save was made.
+  local loaded = WBL_SPIKE_STATE.Observe(STATE_STORE);
+  local verdict = WBL_SPIKE_STATE.Verdict(loaded);
+  print("[SPIKE S10] loaded_state " .. WBL_SPIKE_STATE.Describe(loaded) ..
+    " expected=checksum_equal_to_last_saved_turn_line " .. (verdict == "PASS" and "PENDING" or verdict) ..
+    " save_reload_origin_not_proven");
 end

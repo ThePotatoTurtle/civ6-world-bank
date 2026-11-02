@@ -2,7 +2,7 @@
 -- The standalone dev mod receives an identical generated copy of this file.
 WBL_CONFIG = {
   version = "0.0.0", -- Production semantic version; no playable release exists yet.
-  devVersion = "0.0.0.3", -- Dev version targeting the production version above.
+  devVersion = "0.0.0.4", -- Dev version targeting the production version above.
   growth = {
     model = "production_median_log_ema_v1", -- Matched living-major production log growth; no Gold input.
     standardDefault = 0.01, -- Fallback growth fraction per Standard turn; Leon 2026-10-28.
@@ -86,21 +86,33 @@ WBL_CONFIG = {
     strainedLimitMultiplier = 0.50, -- Non-investor credit limit fraction.
     maximumDepositTierImprovement = 1, -- Maximum deposit-driven liquidity tier improvement.
     maximumRivalBenefitFraction = 0.50, -- Maximum rival V benefit / actual investor V benefit; Leon 2026-10-26.
-    baseReserve = false, -- UNSPECIFIED: era/major-count refill and cap await tuning.
+    baseReserve = { -- Decision 33 (Leon 2026-11-02).
+      enabled = true, -- Formula switch; false leaves the reserve unconfigured (bank suspended).
+      capFloorMultiple = 3, -- Cap in U (scaled world-era credit floor) per living major.
+      refillFloorMultiple = 0.15, -- Refill in U per living major per turn, clamped at cap.
+      openingCashFraction = 1, -- Opening bank cash as a fraction of the first cap.
+      fixedCap = false, -- Test/dev injection: a nonnegative gold cap replaces the formula.
+      fixedRefill = false, -- Test/dev injection: nonnegative gold per turn replaces the formula.
+    },
   },
   floors = {
     valueRatio = 0.80, -- Minimum V after all loan adjustments.
     nominalRate = 0, -- Minimum total nominal interest fraction.
   },
   arrears = {
-    simpleRate = 0.05, -- Fee fraction per turn on unpaid base, never on fees.
-    warningTurns = 7, -- Consecutive arrears turns before warning.
-    defaultTurns = 10, -- Consecutive arrears turns before default.
-    stage2StartTurn = 11, -- Default-turn index at which stage 2 begins.
+    simpleRate = 0.05, -- Fee fraction per Standard turn on unpaid base, never on fees; per game turn = this / turn scale (decision 34).
+    firstFeeDelayTurns = 1, -- Game turns before a new lot's first fee (means "next turn"; not speed-scaled); provisional (Claude default).
+    lotOrder = "OLDEST_DUE_TURN_THEN_LOAN_ID", -- Payment order across lots; provisional (Claude default).
+    componentOrder = {"FEES", "OVERDUE_INTEREST", "OVERDUE_PRINCIPAL"}, -- Order within a lot; provisional (Claude default).
+    missPerPartlyUnpaidInstallment = 1, -- Misses counted per partly unpaid installment; provisional (Claude default).
+    missDowngradeFloor = "C", -- Miss downgrades stop at this rating; provisional (Claude default).
+    warningTurns = 7, -- Consecutive arrears Standard turns before warning; WBL_MATH.ArrearsClocks scales (decision 34).
+    defaultTurns = 10, -- Consecutive arrears Standard turns before default; scaled like warningTurns (decision 34).
+    stage2StartTurn = 11, -- Standard default-turn index at which stage 2 begins (stage 1 = this - 1 Standard turns, scaled; decision 34).
   },
   penalties = {
     stage1 = {
-      garnishPercent = 50, -- Fixed across tiers; percent of positive net GPT, capped at treasury and debt.
+      garnishPercent = 50, -- Fixed across tiers; percent of positive net GPT, capped at treasury and payable debt; the only collection while in default (decision 34).
       amenities = -1, -- Amenities per city.
       productionPercent = -5, -- Percent production per city.
       sciencePercent = -5, -- Percent science per player.
@@ -109,7 +121,7 @@ WBL_CONFIG = {
       tradePercent = -10, -- Percent own international trade route yields.
     },
     stage2 = {
-      garnishPercent = 75, -- Fixed across tiers; percent of positive net GPT, capped at treasury and debt.
+      garnishPercent = 75, -- Fixed across tiers; percent of positive net GPT, capped at treasury and payable debt; the only collection while in default (decision 34).
       amenities = -3, -- Amenities per city.
       productionPercent = -15, -- Percent production per city.
       sciencePercent = -15, -- Percent science per player.
@@ -125,6 +137,9 @@ WBL_CONFIG = {
     debtReliefTurns = 15, -- Milestone deadline in Standard turns.
     maxRestructuresPerLineage = 1, -- Uses per original loan lineage.
     maxDebtReliefPerGame = 1, -- Uses per borrower per game.
+    restructureGraceTurns = 0, -- Replacement loan grace in Standard turns; decision 31.
+    restructureAppliesRatingAndScar = true, -- Replacement V includes the one-grade drop and any scar. Decision 33.
+    debtReliefIncludesFutureInterest = true, -- Relief scales not-yet-due interest too; provisional (Claude default).
   },
   disasterRecovery = {
     valueRatio = {
@@ -136,17 +151,16 @@ WBL_CONFIG = {
   },
   grants = {
     gptMultiple = 3, -- Grant gold divided by current net GPT, before era minimum.
-    eraMinimums = false, -- UNSPECIFIED: grant era minimums await tuning.
+    eraMinimums = false, -- Per-era table form unused; eraMinimumFloorMultiple applies.
+    eraMinimumFloorMultiple = 0.5, -- Grant minimum in U; grant = max(gptMultiple x net GPT, this x U). Decision 33.
     maxPerEra = 1, -- Development grant claims per borrower per era.
     infrastructureLimitMultiplier = 1.50, -- Multiple of normal credit limit.
   },
-  -- Share-only investor values. Decisions 29-31 replace this design with eligible capital; not yet implemented.
+  -- Investor values. Decisions 29-32 apply eligible capital through investors.eligibility.
   investors = {
     depositTerms = {20, 30}, -- Deposit durations in Standard turns.
     depositReturns = {0.05, 0.08}, -- Total return fractions for matching terms; S3 placeholders.
     earlyWithdrawalFraction = 0.90, -- Principal returned on early withdrawal.
-    preferredValueAdjustment = -0.10, -- Own-loan V adjustment while an investor.
-    preferredLimitMultiplier = 1.50, -- Own credit limit multiplier while an investor.
     favorShareStep = 0.10, -- Share fraction per base Favor unit.
     favorPerShareStep = 1, -- Favor per share step per turn.
     favorCap = 5, -- Base shareholder Favor per turn.
@@ -159,11 +173,56 @@ WBL_CONFIG = {
     presidentEraScore = 1, -- Era Score per qualifying era.
     presidentEraTurns = 10, -- Standard President turns required in that era.
     freezeShareThreshold = 0.40, -- Combined qualifying allied share fraction.
+    presidentFreezeTargets = 1, -- Concurrent President solo-freeze targets; provisional (Claude default).
+    eligibility = { -- Decision 29 capital ladder; U = scaled world-era credit floor.
+      entryFloorMultiple = 0.5, -- Minimum E in U for any investor reward.
+      favorStepFloorMultiple = 0.5, -- E in U per base Favor point, capped by favorCap.
+      preferredHalfFloorMultiple = 1, -- Minimum post-loan E in U for the half discount.
+      preferredFullFloorMultiple = 2, -- Minimum post-loan E in U for the full discount.
+      preferredHalfValueAdjustment = -0.05, -- Locked own-loan V fraction at the half step.
+      preferredFullValueAdjustment = -0.10, -- Locked own-loan V fraction at the full step.
+      liquidityExemptionFloorMultiple = 1, -- Minimum post-loan E in U for liquidity V exemption.
+      creditExtensionLimitFraction = 0.5, -- Extension = min(this x normal limit, E).
+      presidentFloorMultiple = 2, -- Minimum E in U to be President.
+      presidentConfirmTurns = 3, -- Consecutive Standard turns at the minimum; loss immediate.
+      coalitionMemberFloorMultiple = 0.5, -- Minimum E in U per freeze coalition member.
+      coalitionFloorMultiple = 3, -- Minimum combined coalition E in U.
+      aidCapPerFloor = 1, -- Aid Favor cap per U of E, capped by aidFavorCap.
+      subsidyMemoryTurns = 30, -- Standard turns forgiveness, relief and grants count as exposure.
+      eraChangeGraceTurns = 10, -- Standard turns the previous era's U stays in force.
+    },
   },
   ai = {
     lowTreasuryGptMultiple = 3, -- Borrow only below this multiple of positive net GPT.
     loanGptMultiple = 5, -- Requested principal divided by positive net GPT.
     maxLoans = 2, -- Maximum concurrent AI loans.
+    termStandardTurns = 20, -- AI loan term in Standard turns; provisional (Claude default), middle term.
+  },
+  state = {
+    schema = 1, -- Persisted state schema version.
+    propertyKey = "WBL_STATE", -- Game property key holding the encoded state.
+    ledgerRetentionTurns = 10, -- Game turns of individual ledger movements kept; totals kept always. Provisional (Claude default).
+    stringCodecWhenUnverified = false, -- WBL_State: when features.statePersistenceVerified is false, true stores the state as a deterministic string instead of a table. Off by default (decision 33 attempts the table form live).
+    checksumModulus = 4294967291, -- WBL_State.Checksum: largest prime below 2^32; keeps hash arithmetic exact in double precision.
+    checksumMultipliers = {31, 131}, -- WBL_State.Checksum: two independent polynomial hash multipliers (small primes).
+  },
+  -- WP3 reducer constants (WBL_Reducer).
+  reducer = {
+    startingRating = "B", -- Spec 2.7: credit rating of a newly observed major.
+    unknownDifficultyFallback = "DIFFICULTY_PRINCE", -- tiers.difficultyFactor row for an unresolved difficulty type; provisional (Claude default).
+    percentUnit = 100, -- Percent per whole: garnish fraction = garnishPercent / this.
+    restructureMinimumPriceRating = "C", -- A D-rated restructure is priced no cheaper than this rating; orchestrator default.
+    recoveredRating = "C", -- Decision 19: rating D returns to this once all arrears and bank debt are settled.
+  },
+  -- WP4 engine adapter constants (WBL_Snapshot / WBL_Effects): engine identities, not tuning.
+  adapters = {
+    costMultiplierPercent = 100, -- GameSpeeds.CostMultiplier unit (percent); speedScale = CostMultiplier / this.
+    excludedPlayerIDs = {62, 63}, -- Free Cities (62) and Barbarians (63) player IDs; never bank majors (playbook).
+    notificationFallbackType = "USER_DEFINED_1", -- NotificationTypes member used when NOTIFICATION_WBL_* is missing.
+  },
+  -- WP5 gameplay entry (WBL_Bank): logging switches only, no tuning.
+  bank = {
+    phaseLogging = true, -- Print one "[WBL PHASE]" line per reducer phase each turn; on for the early dev build.
   },
   spikes = {
     goldDelta = 10, -- Gold change in S1 fixture.
@@ -188,14 +247,37 @@ WBL_CONFIG = {
     standardAutoplayTurns = 100, -- Minimum Standard S11 observation turns.
     onlineAutoplayTurns = 40, -- Proposed shorter Online S11 observation turns.
     epsilon = 0.000001, -- Numerical comparison tolerance for spike observations.
+    -- WP9a telemetry spikes.
+    treasuryTimingTurns = 3, -- S1: turns of per-hook treasury sampling after Run All Spikes (turns).
+    -- WP9b S13 bank dry run.
+    dryRunTurns = 3, -- S13: turns after the Bank Dry Run button turn that also run the in-memory bank pipeline (turns).
   },
+  -- Decision 33: attempt* flags gate live calls (true = call the pcall'd candidate API, log and
+  -- record failure). *Verified flags record evidence status only and never gate an attempt.
   features = {
-    aiBorrowingVerified = false, -- S8 gameplay capability gate.
+    attemptAIBorrowing = true, -- Decision 2 rule-based AI loans; human-only fallback if S8 fails.
+    attemptFavorWrite = true, -- Investor/President Favor grants and restructure/penalty Favor debits.
+    attemptEraScoreWrite = true, -- President Era Score grant.
+    attemptEnvoyWrite = true, -- President envoy grant.
+    attemptMerchantPoints = true, -- President Great Merchant points.
+    attemptPenaltyEffects = true, -- Non-garnish default penalty modifiers.
+    recordFailedEffects = true, -- Failed attempted rewards are kept in players[i].unpaid and shown.
+    aiBorrowingVerified = false, -- S8 evidence status.
     disasterRecoveryVerified = false, -- S5 Congress qualification and disaster identity remain unverified.
-    merchantPointsVerified = false, -- S9 gameplay capability gate.
-    envoyVerified = false, -- S9 gameplay capability gate.
+    merchantPointsVerified = false, -- S9 evidence status.
+    envoyVerified = false, -- Legacy S9 evidence flag; superseded by envoyWriteVerified.
+    goldAdapterVerified = false, -- S1 evidence status; gold is core, checked by the startup probe.
+    penaltyEffectsVerified = false, -- S4 evidence status.
+    favorWriteVerified = false, -- S4 evidence status.
+    eraScoreWriteVerified = false, -- S4 evidence status.
+    envoyWriteVerified = false, -- S9 evidence status.
+    districtMilestoneVerified = false, -- S6 gate: district targets offered only when true.
+    notificationsVerified = false, -- Evidence status; sending is pcall'd and logged regardless.
+    statePersistenceVerified = false, -- S10 gate: false selects the string codec fallback.
+    recoveryPredicateVerified = false, -- S5 gate: recovery entitlements never registered while false (decisions 15-16).
   },
   precision = {
     shareStepTolerance = 0.000000000001, -- Dimensionless machine-boundary tolerance, not a gameplay benefit.
+    balanceTolerance = 0.0001, -- Gold/Favor difference treated as equal in expectedBefore checks; provisional (Claude default).
   },
 }
