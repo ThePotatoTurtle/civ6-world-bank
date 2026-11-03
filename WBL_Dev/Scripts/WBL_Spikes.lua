@@ -14,6 +14,7 @@ include("WBL_SpikeTreasury");
 include("WBL_SpikeDistricts");
 include("WBL_SpikeEffects");
 include("WBL_SpikeDryRun");
+include("WBL_SpikeDealGold");
 
 local RUN_KEY = "WBL_SPIKE_RUN";
 local STATUS_KEY = "WBL_SPIKE_STATUS";
@@ -575,6 +576,23 @@ local function DryRunTurn(turn)
   if not ok then print("[SPIKE S13] variant=dryrun_error actual=" .. Text(err) .. " expected=turn_complete FAIL"); end
 end
 
+-- S14: deal-gold probe for natural play (WBL_SpikeDealGold.lua). Read-only, independent of any run record,
+-- so Session B deals are logged without Run All Spikes.
+local function DealGoldLog(spike, variant, actual, expected, result, detail)
+  print("[SPIKE " .. spike .. "] turn=" .. Game.GetCurrentGameTurn() ..
+    " variant=" .. variant .. " actual=" .. Text(actual) ..
+    " expected=" .. Text(expected) .. " " .. result ..
+    (detail and (" detail=" .. Text(detail)) or ""));
+end
+
+local function DealGoldTurn(turn)
+  if not IsSinglePlayer() or WBL_SPIKE_DEAL_GOLD == nil then return; end
+  local ok, err = pcall(function()
+    WBL_SPIKE_DEAL_GOLD.Observe("gameplay", Majors(), Game.GetCurrentGameTurn(), DealGoldLog);
+  end);
+  if not ok then print("[SPIKE S14] variant=deal_gold_error actual=" .. Text(err) .. " expected=turn_complete PENDING"); end
+end
+
 function WBL_ReloadConfig(ePlayer, params)
   if not IsSinglePlayer() then
     print("[SPIKE GUARD] config_reload multiplayer_or_unknown_context REJECTED");
@@ -607,6 +625,7 @@ local function OnGameTurnStarted(turn)
   if not IsSinglePlayer() then return; end
   -- S13 runs from this same synced hook so it shares the existing turn ordering; its own run record gates it.
   DryRunTurn(turn);
+  DealGoldTurn(turn);
   local run = Game:GetProperty(RUN_KEY);
   if run == nil then return; end
   local configOK, configError = ValidConfig(WBL_CONFIG);

@@ -2,7 +2,7 @@
 -- The standalone dev mod receives an identical generated copy of this file.
 WBL_CONFIG = {
   version = "0.0.0", -- Production semantic version; no playable release exists yet.
-  devVersion = "0.0.0.4", -- Dev version targeting the production version above.
+  devVersion = "0.0.0.5", -- Dev version targeting the production version above.
   growth = {
     model = "production_median_log_ema_v1", -- Matched living-major production log growth; no Gold input.
     standardDefault = 0.01, -- Fallback growth fraction per Standard turn; Leon 2026-10-28.

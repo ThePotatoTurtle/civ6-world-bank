@@ -38,6 +38,7 @@
       <File>Scripts/WBL_SpikeDistricts.lua</File>
       <File>Scripts/WBL_SpikeEffects.lua</File>
       <File>Scripts/WBL_SpikeDryRun.lua</File>
+      <File>Scripts/WBL_SpikeDealGold.lua</File>
       <File>UI/WBL_Dev_Telemetry.lua</File>
     </ImportFiles>
     <AddGameplayScripts id="WBL_DEV_Gameplay" criteria="WBL_DEV_XP2">
@@ -49,11 +50,11 @@
     </AddUserInterfaces>
   </InGameActions>
   <LocalizedText>
-    <Text id="LOC_WBL_DEV_TITLE"><en_US>World Bank Loans Dev v0.0.0.4</en_US></Text>
+    <Text id="LOC_WBL_DEV_TITLE"><en_US>World Bank Loans Dev v0.0.0.5</en_US></Text>
     <Text id="LOC_WBL_DEV_TEASER"><en_US>World Bank Loans API spikes. New test games only.</en_US></Text>
     <Text id="LOC_WBL_NOTIFY_LOAN_TAKEN_MESSAGE"><en_US>World Bank Loans dev: adapter notification test</en_US></Text>
     <Text id="LOC_WBL_NOTIFY_LOAN_TAKEN_SUMMARY"><en_US>Sent by the S9 notify spike through the production adapter.</en_US></Text>
-    <Text id="LOC_WBL_DEV_DESCRIPTION"><en_US>Version 0.0.0.4.[NEWLINE]World Bank Loans research tools. Open Bank on the launch bar or press Ctrl+Shift+D. Run All Spikes writes results to Lua.log. Bank Dry Run logs the in-memory bank pipeline without applying anything. AI deal inspections are nonbinding. Requires Gathering Storm. Engine behavior and multiplayer remain unverified. Never enable this in a real game.</en_US></Text>
+    <Text id="LOC_WBL_DEV_DESCRIPTION"><en_US>Version 0.0.0.5.[NEWLINE]World Bank Loans research tools. Open Bank on the launch bar or press Ctrl+Shift+D. Run All Spikes writes results to Lua.log. Bank Dry Run logs the in-memory bank pipeline without applying anything. AI deal inspections are nonbinding. Requires Gathering Storm. Engine behavior and multiplayer remain unverified. Never enable this in a real game.</en_US></Text>
   </LocalizedText>
   <Files>
     <File>Data/WBL_SpikeModifiers.sql</File>
@@ -79,6 +80,7 @@
     <File>Scripts/WBL_SpikeDistricts.lua</File>
     <File>Scripts/WBL_SpikeEffects.lua</File>
     <File>Scripts/WBL_SpikeDryRun.lua</File>
+    <File>Scripts/WBL_SpikeDealGold.lua</File>
     <File>UI/WBL_Dev_Telemetry.lua</File>
   </Files>
 </Mod>

@@ -5,6 +5,7 @@
 include("WBL_Config")
 include("WBL_State")
 include("WBL_SpikeState")
+include("WBL_SpikeDealGold")
 
 WBL_DEV_TELEMETRY = {}
 local M = WBL_DEV_TELEMETRY
@@ -198,10 +199,22 @@ function M.ObserveState()
   end
 end
 
+-- S14: the same deal read as gameplay, for comparison. Runs whether or not a spike run is active.
+function M.ObserveDealGold()
+  if WBL_SPIKE_DEAL_GOLD == nil then return end
+  local ok, err = pcall(function()
+    local players = PlayerManager.GetAliveMajors()
+    table.sort(players, function(a, b) return a:GetID() < b:GetID() end)
+    WBL_SPIKE_DEAL_GOLD.Observe("ui", players, Game.GetCurrentGameTurn(), Log)
+  end)
+  if not ok then Log("S14", "deal_gold_error_ui", err, "turn_complete", "PENDING") end
+end
+
 local function OnTurn()
   M.ObserveCurrentEvent()
   M.ObserveDevelopment()
   M.ObserveState()
+  M.ObserveDealGold()
 end
 
 -- Idempotent: the panel may build more than once in one session.

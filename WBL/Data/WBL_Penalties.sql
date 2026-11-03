@@ -3,7 +3,7 @@
 -- Never treat data validation as evidence that the effects apply or remove in game (S4 PENDING).
 -- Contract: attach all WBL_PENALTY_* modifiers once per player (AttachModifierByID); activate a level by
 -- setting the player's capital plot property WBL_PENALTY_<TIER>_S<stage> to 1, clearing the previous one.
--- Config SHA256: f600d8e6f884ba20ef0dc3bd77e5afd8920b07162f5d5dd76fa1146125ddfd3b
+-- Config SHA256: 92672a6c03f1ec4a0dbf83c0336d77ea53f6e2926278d0644a71e16c1b192dbd
 INSERT INTO Types (Type,Kind) VALUES
 ('WBL_PENALTY_MODIFIER_PLAYER_TRADE_PERCENT','KIND_MODIFIER');
 INSERT INTO DynamicModifiers (ModifierType,CollectionType,EffectType) VALUES
