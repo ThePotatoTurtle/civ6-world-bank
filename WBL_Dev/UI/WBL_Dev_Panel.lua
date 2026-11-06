@@ -8,6 +8,24 @@ local pin = nil
 local attached = false
 local selectedRun = nil
 local STATUS_PROPERTY = "WBL_SPIKE_STATUS"
+-- S13 run record written by WBL_SpikeDryRun.lua (M.RUN_KEY); read-only here.
+local DRYRUN_PROPERTY = "WBL_DEV_DRYRUN_RUN"
+local dryRunRequested = false
+
+-- Session C (2026-11-04): clicking Bank Dry Run showed nothing, so the result was unclear. Show its progress.
+local function DryRunText()
+  local run = Game:GetProperty(DRYRUN_PROPERTY)
+  if type(run) ~= "table" then
+    return dryRunRequested and "Bank Dry Run: requested, waiting for gameplay." or "Bank Dry Run: not run in this game."
+  end
+  dryRunRequested = false
+  local tally = "PASS " .. tostring(run.pass or 0) .. " | FAIL " .. tostring(run.fail or 0) .. " | PENDING " .. tostring(run.pending or 0)
+  if run.finished == true then
+    return "Bank Dry Run " .. tostring(run.runID) .. ": finished. " .. tally .. ". Details in Lua.log ([SPIKE S13])."
+  end
+  return "Bank Dry Run " .. tostring(run.runID) .. ": running, " .. tostring(run.remaining or "?") ..
+    " more turn(s). " .. tally .. ". Nothing is applied to the game."
+end
 
 local function IsSinglePlayer()
   return not GameConfiguration.IsAnyMultiplayer() and not GameConfiguration.IsHotseat()
@@ -21,6 +39,7 @@ local function Refresh()
   Controls.RunButton:SetDisabled(not canReload or WBL_DEALS.IsBusy())
   Controls.ReloadButton:SetDisabled(not canReload or WBL_DEALS.IsBusy())
   Controls.DryRunButton:SetDisabled(not canReload or WBL_DEALS.IsBusy())
+  Controls.DryRunLabel:SetText(DryRunText())
   Controls.ReloadButton:SetToolTipString(canReload
     and "Re-include the config and log status/version. Reading disk edits is UNVERIFIED."
     or "Reload Config is available only in single player.")
@@ -156,7 +175,11 @@ Controls.CloseButton:RegisterCallback(Mouse.eLClick, function() SetOpen(false) e
 Controls.FallbackButton:RegisterCallback(Mouse.eLClick, Toggle)
 Controls.RunButton:RegisterCallback(Mouse.eLClick, function() SendRequest("WBL_RunAllSpikes") end)
 Controls.ReloadButton:RegisterCallback(Mouse.eLClick, function() SendRequest("WBL_ReloadConfig") end)
-Controls.DryRunButton:RegisterCallback(Mouse.eLClick, function() SendRequest("WBL_BankDryRun") end)
+Controls.DryRunButton:RegisterCallback(Mouse.eLClick, function()
+  dryRunRequested = true
+  SendRequest("WBL_BankDryRun")
+  Controls.DryRunLabel:SetText(DryRunText())
+end)
 Events.LoadGameViewStateDone.Add(OnViewReady)
 Events.GameCoreEventPublishComplete.Add(Refresh)
 Events.PlayerTurnActivated.Add(Refresh)

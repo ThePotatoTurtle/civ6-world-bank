@@ -311,12 +311,12 @@ local function buildLoans(state, player, offer, config, view)
         row.repay = blocked("QUOTE_UNAVAILABLE")
       end
       -- Restructure: lineage flag gates it; the price must be published by the reducer (decision 33C).
+      local lo = loanOfferFor(offer, loan.loanID)
       if view.suspended then
         row.restructure = blocked("BANK_SUSPENDED")
       elseif loan.restructured then
         row.restructure = blocked("ALREADY_USED")
       else
-        local lo = loanOfferFor(offer, loan.loanID)
         if not lo then
           row.restructure = blocked("NO_LOAN_OFFER")
         elseif lo.restructureReason and lo.restructureReason ~= "" then
@@ -328,7 +328,9 @@ local function buildLoans(state, player, offer, config, view)
           row.restructure.quotedV = lo.restructureQuotedV
         end
       end
-      row.restructure.favorCost = config.relief.restructureFavorCost
+      -- Era-scaled cost published with the offer (decision 39); the flat config value only without an offer.
+      row.restructure.favorCost = (lo and finite(lo.restructureFavorCost)) and lo.restructureFavorCost
+        or config.relief.restructureFavorCost
       row.restructure.termStandardTurns = config.relief.restructureTermTurns
       -- A milestone may only be chosen in the origination turn for a loan without one.
       if type(loan.milestone) == "table" and loan.milestone.status ~= "NONE" and loan.milestone.status ~= nil then
@@ -571,7 +573,9 @@ function M.BuildView(state, localPlayerID, config, offers, facts)
     ok = true, playerID = localPlayerID, nonce = player.nonce,
     turn = (offer and finite(offer.turn)) and offer.turn or num(state.lastProcessedTurn),
     suspended = state.suspended == true, suspendReason = state.suspendReason or "",
-    lastResult = player.lastResult,
+    -- Set below only for a real request. Session P (2026-11-04): copying the raw record here gave every new player
+    -- a failed lastResult with no reasonKey, and the panel's lookup of that nil key blanked every tab.
+    lastResult = nil,
   }
   view.suspendedKey = view.suspended and "LOC_WBL_UI_SUSPENDED" or ""
   view.borrow = buildBorrow(state, player, offer, config, view)
@@ -599,11 +603,14 @@ function M.BuildView(state, localPlayerID, config, offers, facts)
   return view
 end
 
--- Amount for shortcut step index `step` (1..#AMOUNT_STEPS) of `maxAmount`; whole gold except the exact maximum.
+-- Amount for shortcut step index `step` (1..#AMOUNT_STEPS) of `maxAmount`, always whole gold, never above the
+-- maximum (Leon, 2026-11-04: request numbers cross from the UI as 32-bit floats, 58.3333 arrived as
+-- 58.333332061768; whole gold is exact). 0 when less than 1 gold is available, which Preview rejects.
 function M.AmountForStep(maxAmount, step)
+  local whole = math.floor(maxAmount)
   local fraction = M.AMOUNT_STEPS[step] or 1
-  if fraction >= 1 then return maxAmount end
-  return math.max(1, math.floor(maxAmount * fraction))
+  if fraction >= 1 then return whole end
+  return math.min(whole, math.max(1, math.floor(maxAmount * fraction)))
 end
 
 -- Live loan preview. entry is a borrow.products[i] or borrow.recoveryOffers[i]; returns table or nil, message.

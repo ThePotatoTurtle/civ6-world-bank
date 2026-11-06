@@ -70,6 +70,13 @@ local function Near(a, b, config)
   return Finite(a) and Finite(b) and math.abs(a - b) <= Tolerance(config)
 end
 
+-- Readback after a balance write: the engine stores gold in 1/256 steps, rounding each change down, so the
+-- result may differ from the request by less than one step (live, Session P 2026-11-04).
+local function NearWritten(a, b, config)
+  local step = math.max(Tolerance(config), config.precision.treasuryResolution or 0)
+  return Finite(a) and Finite(b) and math.abs(a - b) <= step
+end
+
 local function Log(entry)
   print("[WBL EFFECT] id=" .. Text(entry.effectID) .. " kind=" .. Text(entry.kind) ..
     " player=" .. Text(entry.playerID) .. " status=" .. entry.status .. " reason=" .. Text(entry.reason) ..
@@ -149,12 +156,13 @@ local function BalanceWrite(effect, entry, config, read, write)
     entry.applied = true -- The call succeeded; assume it moved so compensation is attempted.
     return entry
   end
-  if not Near(after, before + delta, config) then
+  if not NearWritten(after, before + delta, config) then
     Finish(entry, "FAILED", "READBACK_MISMATCH", "expectedAfter=" .. Text(before + delta))
     entry.applied = not Near(after, before, config)
     return entry
   end
-  entry.amount = delta
+  -- Keep the observed change (after - before, set above): within a 1/256 step of delta, and exactly what
+  -- compensation must reverse.
   return Finish(entry, "APPLIED", entry.clamped and "CLAMPED" or "OK")
 end
 
@@ -352,8 +360,11 @@ local function Notification(effect, entry, config)
     if notificationType == nil then error("notification_type_missing") end
     entry.fallback = fallback
     local data = {}
-    data[ParameterTypes.MESSAGE] = Locale.Lookup(effect.messageKey, effect.p1, effect.p2, effect.p3, effect.p4)
-    data[ParameterTypes.SUMMARY] = Locale.Lookup(summaryKey, effect.p1, effect.p2, effect.p3, effect.p4)
+    -- Live Session A (2026-11-04): Locale.Lookup rejects nil arguments ("Argument must be [boolean, number,
+    -- or string]"), so unused parameters are passed as "" as the reducer already does.
+    local p1, p2, p3, p4 = effect.p1 or "", effect.p2 or "", effect.p3 or "", effect.p4 or ""
+    data[ParameterTypes.MESSAGE] = Locale.Lookup(effect.messageKey, p1, p2, p3, p4)
+    data[ParameterTypes.SUMMARY] = Locale.Lookup(summaryKey, p1, p2, p3, p4)
     NotificationManager.SendNotification(effect.playerID, notificationType, data)
   end)
   if not ok then return Finish(entry, "FAILED", "CALL_FAILED", err) end

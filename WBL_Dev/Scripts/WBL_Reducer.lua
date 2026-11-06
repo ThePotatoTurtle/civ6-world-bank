@@ -497,7 +497,7 @@ end
 
 local function restructureQuote(ctx, p, loan)
   return WBL_MATH.RestructureQuote({product = loan.product, tier = p.tier,
-    rating = restructurePriceRating(ctx, p.rating), scarActive = restructureScarActive(ctx, p),
+    rating = restructurePriceRating(ctx, p.rating), scarActive = restructureScarActive(ctx, p), inDefault = p.inDefault,
     growth = ctx.growth, scale = ctx.scale, scheduledPrincipal = loan.scheduledPrincipal,
     overduePrincipal = loan.overduePrincipal, futureInterest = loan.futureInterest,
     overdueInterest = loan.overdueInterest, arrearsFees = loan.arrearsFees}, ctx.config)
@@ -632,7 +632,8 @@ local function buildOffer(ctx, playerID)
   local loans = activeLoans(s, playerID)
   for i = 1, #loans do
     local loan = loans[i]
-    local row = {loanID = loan.loanID, restructureReason = restructureBlock(ctx, p, loan)}
+    local row = {loanID = loan.loanID, restructureReason = restructureBlock(ctx, p, loan),
+      restructureFavorCost = WBL_MATH.RestructureFavorCost(ctx.U, ctx.scale, c)}
     if row.restructureReason == "" then
       local q = restructureQuote(ctx, p, loan)
       row.restructureQuotedV = q.valueRatio
@@ -716,8 +717,12 @@ local function termIn(list, term)
   return nil
 end
 
+-- Request numbers cross from the UI as 32-bit floats (Session P, 2026-11-04: 58.3333 arrived as 58.333332061768),
+-- so a quote may differ from the exact value by that rounding as well as by the balance tolerance.
 local function within(actual, quoted, ctx)
-  return actual <= quoted + ctx.config.precision.balanceTolerance
+  local precision = ctx.config.precision
+  local slack = math.max(precision.balanceTolerance, math.abs(quoted) * (precision.requestFloatEpsilon or 0))
+  return actual <= quoted + slack
 end
 
 -- ------------------------------------------------------------------ loan creation
@@ -907,7 +912,7 @@ function H.RESTRUCTURE(ctx, p, params)
   if block ~= "" then return block end
   local q = restructureQuote(ctx, p, loan)
   if not within(q.valueRatio, quotedV, ctx) then return "PRICE_CHANGED" end
-  local cost = math.min(c.relief.restructureFavorCost, available(ctx, ctx.favor, p.playerID))
+  local cost = math.min(WBL_MATH.RestructureFavorCost(ctx.U, ctx.scale, c), available(ctx, ctx.favor, p.playerID))
   favorEffect(ctx, p.playerID, -cost, "RESTRUCTURE_FAVOR", {loanID = loan.loanID}, true)
   removeLoanLots(ctx.state, loan.loanID)
   local child = newLoan(ctx, p, {product = loan.product, quote = q, entitlementID = loan.entitlementID,

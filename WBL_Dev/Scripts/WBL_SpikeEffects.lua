@@ -47,11 +47,25 @@ local function Near(a, b, config)
   return Finite(a) and Finite(b) and math.abs(a - b) <= config.spikes.epsilon
 end
 
+-- Session A, 2026-11-03: GameConfiguration's multiplayer queries (cited only from UI scripts) did not
+-- answer in gameplay, so a GameConfiguration-only guard rejected a single-player game. Fallback: exactly one
+-- living human major means no other machine can run this turn. Mirrors WBL_Spikes.lua.
 local function IsSinglePlayer()
-  local ok, allowed = pcall(function()
-    return not GameConfiguration.IsAnyMultiplayer() and not GameConfiguration.IsHotseat()
+  local ok, multiplayer, hotseat = pcall(function()
+    return GameConfiguration.IsAnyMultiplayer(), GameConfiguration.IsHotseat()
   end)
-  return ok and allowed
+  if ok and type(multiplayer) == "boolean" and type(hotseat) == "boolean" then
+    multiplayer = multiplayer or hotseat
+    return not multiplayer
+  end
+  local counted, humans = pcall(function()
+    local count = 0
+    for _, player in ipairs(PlayerManager.GetAliveMajors()) do
+      if player:IsHuman() then count = count + 1 end
+    end
+    return count
+  end)
+  return counted and humans == 1
 end
 
 -- Counts results per adapter run (stored on the run record, scalars only) and forwards to the caller.

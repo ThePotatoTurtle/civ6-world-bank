@@ -3,9 +3,9 @@
 <GameData>
   <LocalizedText>
     <Row Tag="LOC_WBL_UI_TITLE" Language="en_US"><Text>World Bank Loans</Text></Row>
-    <Row Tag="LOC_WBL_UI_LAUNCH_LABEL" Language="en_US"><Text>Bank</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAUNCH_LABEL" Language="en_US"><Text>[ICON_GoldLarge]</Text></Row>
     <Row Tag="LOC_WBL_UI_BUTTON_OPEN" Language="en_US"><Text>World Bank</Text></Row>
-    <Row Tag="LOC_WBL_UI_BUTTON_TOOLTIP" Language="en_US"><Text>World Bank Loans (Ctrl+Shift+B)</Text></Row>
+    <Row Tag="LOC_WBL_UI_BUTTON_TOOLTIP" Language="en_US"><Text>World Bank Loans (B)</Text></Row>
     <Row Tag="LOC_WBL_UI_TAB_BORROW" Language="en_US"><Text>Borrow</Text></Row>
     <Row Tag="LOC_WBL_UI_TAB_LOANS" Language="en_US"><Text>My loans</Text></Row>
     <Row Tag="LOC_WBL_UI_TAB_INVEST" Language="en_US"><Text>Invest</Text></Row>
@@ -32,14 +32,14 @@
     <Row Tag="LOC_WBL_UI_PRODUCT_ORDINARY" Language="en_US"><Text>Loan</Text></Row>
     <Row Tag="LOC_WBL_UI_PRODUCT_INFRASTRUCTURE" Language="en_US"><Text>Infrastructure loan</Text></Row>
     <Row Tag="LOC_WBL_UI_PRODUCT_RECOVERY" Language="en_US"><Text>Disaster recovery loan</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_SUMMARY" Language="en_US"><Text>Tier {1_tier}, rating {2_rating}. Credit limit {3_limit} gold, {4_draw} available. Growth {5_growth} per turn.</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_LIQUIDITY" Language="en_US"><Text>Bank pool {1_pool} of {2_cap} gold. Liquidity: {3_tier}.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_SUMMARY" Language="en_US"><Text>Tier: {1_tier}. Rating: {2_rating}. You can borrow {4_draw} of your {3_limit} gold limit. Global growth: {5_growth} per turn.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_LIQUIDITY" Language="en_US"><Text>Bank funds: {1_pool} of {2_cap} gold ({3_tier}).</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_SCAR" Language="en_US"><Text>Credit scar is active, so new loans cost a bit more.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_PRICE_NOTE" Language="en_US"><Text>Rate shown is for the full amount. Smaller loans can cost less.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_BLOCKED" Language="en_US"><Text>Not available right now: {1_reason}</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_NO_PRODUCTS" Language="en_US"><Text>No loan types are offered to you right now.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_PRODUCT_HEADER" Language="en_US"><Text>{1_product}: up to {2_max} gold</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_V" Language="en_US"><Text>Price V {1_v} (base {2_base}, rating {3_rating}, liquidity {4_liq}, scar {5_scar}, investor {6_inv}){7_floor}</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_V" Language="en_US"><Text>Price: you repay {1_v} gold per gold borrowed, in today's value{7_floor}.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_V_FLOOR" Language="en_US"><Text>, floor applied</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_AMOUNT" Language="en_US"><Text>Amount to borrow</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_AMOUNT_BTN" Language="en_US"><Text>{1_amount} gold</Text></Row>
@@ -48,8 +48,8 @@
     <Row Tag="LOC_WBL_UI_BORROW_MILESTONE_REQ" Language="en_US"><Text>A milestone is required. Finish it before the halfway point and {1_pct} of what's left is forgiven.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_MILESTONE_OPT" Language="en_US"><Text>Optional milestone. Finish it before the halfway point and {1_pct} of what's left is forgiven.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_MILESTONE_BTN" Language="en_US"><Text>Milestone: {1_name}</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_PREVIEW" Language="en_US"><Text>{1_n} payments of {2_pay} gold after {3_grace} turns of grace. You repay {4_total} gold, a cost of {5_cost}. Rate {6_rate}.</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_TAKE_BTN" Language="en_US"><Text>Take {1_amount} gold</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_PREVIEW" Language="en_US"><Text>{1_n} payments of {2_pay} gold, starting after {3_grace} grace turns. Total repaid: {4_total} gold (cost {5_cost}, rate {6_rate}).</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_TAKE_BTN" Language="en_US"><Text>Borrow {1_amount} gold</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_NAME_NONE" Language="en_US"><Text>None</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_NAME_POPULATION" Language="en_US"><Text>{1_city} grows to {2_pop}</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_NAME_TECH" Language="en_US"><Text>Research {1_tech}</Text></Row>
@@ -79,6 +79,7 @@
     <Row Tag="LOC_WBL_UI_LOAN_HEADER" Language="en_US"><Text>{1_product} #{2_id}</Text></Row>
     <Row Tag="LOC_WBL_UI_LOAN_RECOVERY" Language="en_US"><Text>Recovery loan for: {1_disaster}</Text></Row>
     <Row Tag="LOC_WBL_UI_LOAN_BALANCE" Language="en_US"><Text>Balance {1_principal} gold. Total owed {2_total}, including {3_future} of future interest.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOANS_DUE_TOTAL" Language="en_US"><Text>Loan payments due: {1_amount} [ICON_Gold] in total, taken at the start of the turn each falls due.</Text></Row>
     <Row Tag="LOC_WBL_UI_LOAN_NEXT" Language="en_US"><Text>Next payment {1_pay} gold on turn {2_turn}. {3_left} payments left.</Text></Row>
     <Row Tag="LOC_WBL_UI_LOAN_PAID_UP" Language="en_US"><Text>No scheduled payments left.</Text></Row>
     <Row Tag="LOC_WBL_UI_LOAN_ARREARS" Language="en_US"><Text>Arrears {1_total}: principal {2_p}, interest {3_i}, fees {4_f}. Missed payments: {5_missed}.</Text></Row>

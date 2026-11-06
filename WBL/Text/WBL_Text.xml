@@ -6,9 +6,9 @@
 <GameData>
   <LocalizedText>
     <Row Tag="LOC_WBL_NOTIFY_LOAN_TAKEN_MESSAGE" Language="en_US"><Text>World Bank loan approved</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_LOAN_TAKEN_SUMMARY" Language="en_US"><Text>You got {2_Amount : number #} [ICON_Gold] Gold from the World Bank (loan {1_LoanID}). Payments show in the Bank panel.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_LOAN_TAKEN_SUMMARY" Language="en_US"><Text>You got {2_Amount : number #} [ICON_Gold] from the World Bank as loan #{1_LoanID} (loan numbers count across all civs). Payments show in the Bank panel.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_PAYMENT_MISSED_MESSAGE" Language="en_US"><Text>Loan payment missed</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_PAYMENT_MISSED_SUMMARY" Language="en_US"><Text>You couldn't cover {2_Amount : number #} [ICON_Gold] Gold on loan {1_LoanID}. It's now in arrears and picks up a fee each turn.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_PAYMENT_MISSED_SUMMARY" Language="en_US"><Text>You couldn't cover {2_Amount : number #} [ICON_Gold] on World Bank loan #{1_LoanID}. It's now in arrears and picks up a fee each turn.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_ARREARS_WARNING_MESSAGE" Language="en_US"><Text>Default warning</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_ARREARS_WARNING_SUMMARY" Language="en_US"><Text>You've been in arrears for {1_Turns : number #} turns. Pay it down soon or you'll go into default.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE1_MESSAGE" Language="en_US"><Text>You're in default</Text></Row>
@@ -18,15 +18,15 @@
     <Row Tag="LOC_WBL_NOTIFY_DEFAULT_CLEARED_MESSAGE" Language="en_US"><Text>Out of default</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_DEFAULT_CLEARED_SUMMARY" Language="en_US"><Text>Your arrears are paid and the default penalties are gone. Your credit stays scarred for a while.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_RESTRUCTURED_MESSAGE" Language="en_US"><Text>Loan restructured</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_RESTRUCTURED_SUMMARY" Language="en_US"><Text>Loan {2_OldLoanID} is now loan {1_LoanID} with a longer schedule. It cost {3_Favor : number #} [ICON_Favor] Diplomatic Favor.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_RESTRUCTURED_SUMMARY" Language="en_US"><Text>World Bank loan #{2_OldLoanID} is now loan #{1_LoanID} with a longer schedule. It cost {3_Favor : number #} [ICON_Favor] Diplomatic Favor.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_DEBT_RELIEF_MESSAGE" Language="en_US"><Text>Debt relief granted</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_DEBT_RELIEF_SUMMARY" Language="en_US"><Text>You hit your relief milestone, so the World Bank forgave {1_Amount : number #} [ICON_Gold] Gold of your debt.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_DEBT_RELIEF_SUMMARY" Language="en_US"><Text>You hit your relief milestone, so the World Bank forgave {1_Amount : number #} [ICON_Gold] of your debt.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_MILESTONE_COMPLETE_MESSAGE" Language="en_US"><Text>Loan milestone reached</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_MILESTONE_COMPLETE_SUMMARY" Language="en_US"><Text>You reached the milestone on loan {1_LoanID}. {2_Amount : number #} [ICON_Gold] Gold of principal was forgiven.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_MILESTONE_COMPLETE_SUMMARY" Language="en_US"><Text>You reached the milestone on World Bank loan #{1_LoanID}. {2_Amount : number #} [ICON_Gold] of principal was forgiven.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_DEPOSIT_MATURED_MESSAGE" Language="en_US"><Text>Deposit matured</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_DEPOSIT_MATURED_SUMMARY" Language="en_US"><Text>Deposit {1_DepositID} paid out {2_Amount : number #} [ICON_Gold] Gold. {3_Arrears : number #} of it went to your arrears first.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_DEPOSIT_MATURED_SUMMARY" Language="en_US"><Text>Deposit {1_DepositID} paid out {2_Amount : number #} [ICON_Gold]. {3_Arrears : number #} of it went to your arrears first.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_WITHDRAWAL_MESSAGE" Language="en_US"><Text>Deposit withdrawn</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_WITHDRAWAL_SUMMARY" Language="en_US"><Text>You pulled deposit {1_DepositID} early and got {2_Amount : number #} [ICON_Gold] Gold. {3_Arrears : number #} of it went to your arrears first.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_WITHDRAWAL_SUMMARY" Language="en_US"><Text>You pulled deposit {1_DepositID} early and got {2_Amount : number #} [ICON_Gold]. {3_Arrears : number #} of it went to your arrears first.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_PRESIDENT_GAINED_MESSAGE" Language="en_US"><Text>You're World Bank President</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_PRESIDENT_GAINED_SUMMARY" Language="en_US"><Text>You're the bank's biggest investor, so you get the President perks and can see everyone's debts.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_PRESIDENT_LOST_MESSAGE" Language="en_US"><Text>No longer President</Text></Row>
@@ -38,11 +38,11 @@
     <Row Tag="LOC_WBL_NOTIFY_RECOVERY_OFFER_MESSAGE" Language="en_US"><Text>Disaster recovery loan offered</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_RECOVERY_OFFER_SUMMARY" Language="en_US"><Text>The World Bank offers you a recovery loan after a disaster. Claim it in the Bank panel before turn {3_Turn : number #}.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_RECOVERY_CLAIMED_MESSAGE" Language="en_US"><Text>Recovery loan claimed</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_RECOVERY_CLAIMED_SUMMARY" Language="en_US"><Text>Your disaster recovery loan is paid out as loan {2_LoanID}.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_RECOVERY_CLAIMED_SUMMARY" Language="en_US"><Text>Your disaster recovery loan is paid out as World Bank loan #{2_LoanID}.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_RECOVERY_EXPIRED_MESSAGE" Language="en_US"><Text>Recovery offer expired</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_RECOVERY_EXPIRED_SUMMARY" Language="en_US"><Text>You didn't claim the disaster recovery loan in time, so the offer is gone.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_GRANT_PAID_MESSAGE" Language="en_US"><Text>Development grant paid</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_GRANT_PAID_SUMMARY" Language="en_US"><Text>The World Bank paid you a {2_Amount : number #} [ICON_Gold] Gold development grant. You don't pay it back.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_GRANT_PAID_SUMMARY" Language="en_US"><Text>The World Bank paid you a {2_Amount : number #} [ICON_Gold] development grant. You don't pay it back.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_TIER_CHANGED_MESSAGE" Language="en_US"><Text>Development tier changed</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_TIER_CHANGED_SUMMARY" Language="en_US"><Text>The World Bank now rates you {1_Tier} (was {2_OldTier}). That changes which loans you can get and on what terms.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_EFFECT_FAILED" Language="en_US"><Text>The bank couldn't apply that, so nothing changed. Lua.log has the details.</Text></Row>

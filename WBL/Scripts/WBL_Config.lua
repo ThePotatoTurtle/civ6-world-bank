@@ -2,7 +2,7 @@
 -- The standalone dev mod receives an identical generated copy of this file.
 WBL_CONFIG = {
   version = "0.0.0", -- Production semantic version; no playable release exists yet.
-  devVersion = "0.0.0.5", -- Dev version targeting the production version above.
+  devVersion = "0.0.0.12", -- Dev version targeting the production version above.
   growth = {
     model = "production_median_log_ema_v1", -- Matched living-major production log growth; no Gold input.
     standardDefault = 0.01, -- Fallback growth fraction per Standard turn; Leon 2026-10-28.
@@ -131,13 +131,14 @@ WBL_CONFIG = {
     },
   },
   relief = {
-    restructureFavorCost = 50, -- Favor, or all available Favor if less.
+    restructureFavorCost = 50, -- Favor in the Ancient era, or all available Favor if less; scaled by the effective U over the Ancient U at the same speed (50, 100, 150 ...; Leon 2026-11-05, decision 39).
     restructureTermTurns = 30, -- Replacement loan payment duration in Standard turns.
     debtReliefFraction = 0.50, -- Fraction of eligible debt and arrears forgiven.
     debtReliefTurns = 15, -- Milestone deadline in Standard turns.
     maxRestructuresPerLineage = 1, -- Uses per original loan lineage.
     maxDebtReliefPerGame = 1, -- Uses per borrower per game.
     restructureGraceTurns = 0, -- Replacement loan grace in Standard turns; decision 31.
+    restructureDefaultGraceTurns = 1, -- Grace when restructured while in default, so default can clear before the first payment (decision 40).
     restructureAppliesRatingAndScar = true, -- Replacement V includes the one-grade drop and any scar. Decision 33.
     debtReliefIncludesFutureInterest = true, -- Relief scales not-yet-due interest too; provisional (Claude default).
   },
@@ -176,7 +177,7 @@ WBL_CONFIG = {
     presidentFreezeTargets = 1, -- Concurrent President solo-freeze targets; provisional (Claude default).
     eligibility = { -- Decision 29 capital ladder; U = scaled world-era credit floor.
       entryFloorMultiple = 0.5, -- Minimum E in U for any investor reward.
-      favorStepFloorMultiple = 0.5, -- E in U per base Favor point, capped by favorCap.
+      favorStepFloorMultiple = 2, -- E in U per base Favor point, capped by favorCap. Leon 2026-11-05 (decision 39): was 0.5; at about 4 gold per Favor the perk was worth ~160% of a minimum deposit over 20 turns, now ~40%.
       preferredHalfFloorMultiple = 1, -- Minimum post-loan E in U for the half discount.
       preferredFullFloorMultiple = 2, -- Minimum post-loan E in U for the full discount.
       preferredHalfValueAdjustment = -0.05, -- Locked own-loan V fraction at the half step.
@@ -202,7 +203,7 @@ WBL_CONFIG = {
     schema = 1, -- Persisted state schema version.
     propertyKey = "WBL_STATE", -- Game property key holding the encoded state.
     ledgerRetentionTurns = 10, -- Game turns of individual ledger movements kept; totals kept always. Provisional (Claude default).
-    stringCodecWhenUnverified = false, -- WBL_State: when features.statePersistenceVerified is false, true stores the state as a deterministic string instead of a table. Off by default (decision 33 attempts the table form live).
+    stringCodecWhenUnverified = true, -- WBL_State: when features.statePersistenceVerified is false, true stores the state as a deterministic string instead of a table. On since 2026-11-04: live S10 showed Game properties store table numbers at 32-bit float precision (1000.1 read back as 1000.0999755859375) while the string codec round-tripped exactly.
     checksumModulus = 4294967291, -- WBL_State.Checksum: largest prime below 2^32; keeps hash arithmetic exact in double precision.
     checksumMultipliers = {31, 131}, -- WBL_State.Checksum: two independent polynomial hash multipliers (small primes).
   },
@@ -262,22 +263,24 @@ WBL_CONFIG = {
     attemptMerchantPoints = true, -- President Great Merchant points.
     attemptPenaltyEffects = true, -- Non-garnish default penalty modifiers.
     recordFailedEffects = true, -- Failed attempted rewards are kept in players[i].unpaid and shown.
-    aiBorrowingVerified = false, -- S8 evidence status.
+    aiBorrowingVerified = false, -- S8 evidence status. Live 2026-11-04: AI loans pay out and repay; AI spending of the gold (S8) is still unobserved.
     disasterRecoveryVerified = false, -- S5 Congress qualification and disaster identity remain unverified.
-    merchantPointsVerified = false, -- S9 evidence status.
+    merchantPointsVerified = true, -- S9 evidence status. Live single player 2026-11-04: adapter apply and reverse; multiplayer pending.
     envoyVerified = false, -- Legacy S9 evidence flag; superseded by envoyWriteVerified.
-    goldAdapterVerified = false, -- S1 evidence status; gold is core, checked by the startup probe.
-    penaltyEffectsVerified = false, -- S4 evidence status.
-    favorWriteVerified = false, -- S4 evidence status.
-    eraScoreWriteVerified = false, -- S4 evidence status.
-    envoyWriteVerified = false, -- S9 evidence status.
+    goldAdapterVerified = true, -- S1 evidence status; gold is core, checked by the startup probe. Live single player 2026-11-04 (Sessions A, C, P); multiplayer pending.
+    penaltyEffectsVerified = false, -- S4 evidence status. Live 2026-11-04: DEVELOPING stage 1 applied and cleared exactly (twice); other tiers and stages untested.
+    favorWriteVerified = true, -- S4 evidence status. Live single player 2026-11-04: adapter credit/debit round trip and production deposit Favor perk; multiplayer pending.
+    eraScoreWriteVerified = false, -- S4 evidence status. Live 2026-11-04: the write raises no error, but GetPlayerCurrentScore is nil in gameplay, so it cannot be read back.
+    envoyWriteVerified = true, -- S9 evidence status. Live single player 2026-11-04: adapter +1 and visible in game; multiplayer pending.
     districtMilestoneVerified = false, -- S6 gate: district targets offered only when true.
-    notificationsVerified = false, -- Evidence status; sending is pcall'd and logged regardless.
+    notificationsVerified = true, -- Evidence status; sending is pcall'd and logged regardless. Live 2026-11-04: production loan notification shown with its text.
     statePersistenceVerified = false, -- S10 gate: false selects the string codec fallback.
     recoveryPredicateVerified = false, -- S5 gate: recovery entitlements never registered while false (decisions 15-16).
   },
   precision = {
     shareStepTolerance = 0.000000000001, -- Dimensionless machine-boundary tolerance, not a gameplay benefit.
     balanceTolerance = 0.0001, -- Gold/Favor difference treated as equal in expectedBefore checks; provisional (Claude default).
+    requestFloatEpsilon = 0.00000011920928955078125, -- 2^-23, a 32-bit float's relative step: UI request numbers arrive in that precision (Session P, 2026-11-04). Quote comparisons only.
+    treasuryResolution = 0.00390625, -- 1/256 gold: the live treasury rounds each change down to this step (Session P, 2026-11-04: -2.18555 applied as -2.1875). Readback tolerance only.
   },
 }

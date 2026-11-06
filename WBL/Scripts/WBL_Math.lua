@@ -698,6 +698,16 @@ end
 -- {eraType, U, previousU, previousUntilTurn} or nil. A world-era change keeps the
 -- previous era's U for turns [changeTurn, changeTurn + scaled eraChangeGraceTurns).
 -- Returns the next era record and the effective U for this turn.
+-- Restructuring Favor cost (decision 39): the configured Ancient cost times U over the Ancient U at the same speed,
+-- so it follows the era like loan sizes do (50, 100, 150 Favor with the shipped floors) but not game speed.
+-- Whole Favor.
+function M.RestructureFavorCost(U, scale, config)
+  local c = configOrDefault(config)
+  requirePositive(U, "U")
+  local ancient = M.EraCreditMinimum("ERA_ANCIENT", scale, c)
+  return math.floor(c.relief.restructureFavorCost * U / ancient + 0.5)
+end
+
 function M.CapitalUnit(era, eraType, turn, scale, config)
   local c = configOrDefault(config)
   requireInteger(turn, "turn")
@@ -1214,7 +1224,8 @@ end
 -- for the current tier; with relief.restructureAppliesRatingAndScar the one-grade-dropped
 -- rating and any scar adjust it (D stays D at credit.D.valueAdjustment); never investor or
 -- liquidity adjustments; normal floor. Not-yet-due interest is cancelled; overdue interest
--- and fees are capitalized as principal. Term/grace from relief.* scaled.
+-- and fees are capitalized as principal. Term/grace from relief.* scaled; a borrower in default
+-- (r.inDefault) gets relief.restructureDefaultGraceTurns so default can clear first (decision 40).
 function M.RestructureQuote(r, config)
   local c = configOrDefault(config)
   assert(type(r) == "table", "restructure requires a request table")
@@ -1238,7 +1249,7 @@ function M.RestructureQuote(r, config)
   local principal = carried + r.overdueInterest + r.arrearsFees
   local quote = M.LoanQuote(principal, v.quotedV, r.growth,
     M.ScaleTurns(c.relief.restructureTermTurns, r.scale),
-    M.ScaleTurns(c.relief.restructureGraceTurns, r.scale), c)
+    M.ScaleTurns(r.inDefault == true and c.relief.restructureDefaultGraceTurns or c.relief.restructureGraceTurns, r.scale), c)
   quote.product, quote.tier, quote.rating = product, r.tier, newRating
   quote.standardTermTurns = c.relief.restructureTermTurns
   quote.vComponents = v

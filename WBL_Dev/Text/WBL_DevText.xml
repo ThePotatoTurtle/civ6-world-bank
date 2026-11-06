@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dev-only gameplay text for the S9 notify spike (WBL_SpikeEffects.lua), loaded with UpdateText. Session C on
+     2026-11-04 showed raw LOC keys when these lived only in WBL_Dev.modinfo LocalizedText, which is mod-browser
+     text and never reaches the in-game database. Never load together with the production mod. -->
+<GameData>
+  <LocalizedText>
+    <Row Tag="LOC_WBL_NOTIFY_LOAN_TAKEN_MESSAGE" Language="en_US"><Text>World Bank Loans dev: adapter notification test</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_LOAN_TAKEN_SUMMARY" Language="en_US"><Text>Sent by the S9 notify spike through the production adapter.</Text></Row>
+  </LocalizedText>
+</GameData>

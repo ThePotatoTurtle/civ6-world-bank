@@ -16,7 +16,7 @@ Don't enable World Bank Loans and `WBL_Dev` at the same time. They share script 
 
 ## Using it
 
-Open the bank with **Ctrl+Shift+B** or the World Bank button on the launch bar. The panel has four tabs: Borrow, My loans, Invest and Bank.
+Open the bank with **B** (when no settler is selected, since B also founds a city) or the World Bank button on the launch bar. The panel has four tabs: Borrow, My loans, Invest and Bank.
 
 - **Borrow:** loans, grants and milestone loans, with the terms shown before you accept.
 - **My loans:** repayment, early repayment, restructuring and debt relief.
@@ -113,7 +113,7 @@ Full rules are in the spec and decision log, and every tunable number is in [WBL
 
 ### Unreleased
 
-- New: production mod `WBL` with a bank panel (Ctrl+Shift+B or launch bar), loans, repayment, arrears, default, restructuring, debt relief, milestones, grants, deposits, the President, lending freezes and AI borrowing. Not run in game yet.
+- New: production mod `WBL` with a bank panel (B or launch bar), loans, repayment, arrears, default, restructuring, debt relief, milestones, grants, deposits, the President, lending freezes and AI borrowing. Not run in game yet.
 - New: dev mod now exercises the same adapters the production mod uses, plus a bank dry run.
 - New: packaging and install tools handle both `WBL` and `WBL_Dev`.
 - Change: in default, the bank garnishes positive GPT instead of sweeping the treasury.

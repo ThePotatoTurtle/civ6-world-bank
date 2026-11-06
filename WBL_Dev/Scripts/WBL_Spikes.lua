@@ -3,6 +3,9 @@
 include("WBL_Config");
 include("WBL_Math");
 include("WBL_State");
+-- S13 runs WBL_REDUCER.Turn, which needs both modules; Session C (2026-11-04) failed with them missing.
+include("WBL_AIPolicy");
+include("WBL_Reducer");
 include("WBL_Snapshot");
 include("WBL_Effects");
 include("WBL_SpikePlayerEffects");
@@ -44,11 +47,25 @@ local function Text(value)
   return tostring(value):gsub("[\r\n]", " ");
 end
 
+-- Session A, 2026-11-03: GameConfiguration's multiplayer queries (cited only from UI scripts) did not
+-- answer in gameplay, so a GameConfiguration-only guard rejected a single-player game. Fallback: exactly one
+-- living human major means no other machine can run this turn. The basis is returned for the log.
 local function IsSinglePlayer()
-  local ok, allowed = pcall(function()
-    return not GameConfiguration.IsAnyMultiplayer() and not GameConfiguration.IsHotseat();
+  local ok, multiplayer, hotseat = pcall(function()
+    return GameConfiguration.IsAnyMultiplayer(), GameConfiguration.IsHotseat();
   end);
-  return ok and allowed;
+  if ok and type(multiplayer) == "boolean" and type(hotseat) == "boolean" then
+    multiplayer = multiplayer or hotseat;
+    return not multiplayer, "GameConfiguration:" .. tostring(multiplayer);
+  end
+  local counted, humans = pcall(function()
+    local count = 0;
+    for _, player in ipairs(PlayerManager.GetAliveMajors()) do
+      if player:IsHuman() then count = count + 1; end
+    end
+    return count;
+  end);
+  return counted and humans == 1, "GameConfiguration_unavailable:" .. Text(multiplayer) .. ",humanMajors:" .. Text(humans);
 end
 
 local function ValidConfig(config)
@@ -438,8 +455,9 @@ local function Finish(run)
 end
 
 function WBL_RunAllSpikes(ePlayer, params)
-  if not IsSinglePlayer() then
-    print("[SPIKE GUARD] player=" .. Text(ePlayer) .. " multiplayer_or_unknown_context REJECTED");
+  local single, basis = IsSinglePlayer();
+  if not single then
+    print("[SPIKE GUARD] player=" .. Text(ePlayer) .. " multiplayer_or_unknown_context basis=" .. Text(basis) .. " REJECTED");
     return;
   end
   local player = Players[ePlayer];
@@ -548,8 +566,9 @@ local function DryRunLog(run)
 end
 
 function WBL_BankDryRun(ePlayer, params)
-  if not IsSinglePlayer() then
-    print("[SPIKE GUARD] player=" .. Text(ePlayer) .. " bank_dry_run multiplayer_or_unknown_context REJECTED");
+  local single, basis = IsSinglePlayer();
+  if not single then
+    print("[SPIKE GUARD] player=" .. Text(ePlayer) .. " bank_dry_run multiplayer_or_unknown_context basis=" .. Text(basis) .. " REJECTED");
     return;
   end
   local player = Players[ePlayer];
@@ -594,8 +613,9 @@ local function DealGoldTurn(turn)
 end
 
 function WBL_ReloadConfig(ePlayer, params)
-  if not IsSinglePlayer() then
-    print("[SPIKE GUARD] config_reload multiplayer_or_unknown_context REJECTED");
+  local single, basis = IsSinglePlayer();
+  if not single then
+    print("[SPIKE GUARD] config_reload multiplayer_or_unknown_context basis=" .. Text(basis) .. " REJECTED");
     return;
   end
   local player = Players[ePlayer];
@@ -722,6 +742,10 @@ GameEvents.WBL_BankDryRun.Add(WBL_BankDryRun);
 GameEvents.OnGameTurnStarted.Add(OnGameTurnStarted);
 GameEvents.PlayerTurnStarted.Add(TreasuryHook("PlayerTurnStarted"));
 GameEvents.PlayerTurnStartComplete.Add(TreasuryHook("PlayerTurnStartComplete"));
+do
+  local single, basis = IsSinglePlayer();
+  print("[SPIKE GUARD] load single_player=" .. Text(single) .. " basis=" .. Text(basis));
+end
 local resumed = Game:GetProperty(RUN_KEY);
 if resumed then
   print("[SPIKE S10] loaded_property run=" .. Text(resumed.runID) .. " lastTurn=" .. Text(resumed.lastTurn) ..

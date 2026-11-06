@@ -47,7 +47,7 @@
   <LocalizedText>
     <Text id="LOC_WBL_TITLE"><en_US>World Bank Loans</en_US></Text>
     <Text id="LOC_WBL_TEASER"><en_US>Borrow from a shared World Bank, or invest in it. Early development build, not tested in game yet.</en_US></Text>
-    <Text id="LOC_WBL_DESCRIPTION"><en_US>Version 0.0.0.[NEWLINE]This is an early development build. It hasn't been tested in game yet, so expect bugs and use a throwaway game.[NEWLINE][NEWLINE]Take loans from a shared World Bank and pay them back over time, or deposit gold for a return and investor perks. Your terms depend on your development tier and credit rating. Open Bank on the launch bar or press Ctrl+Shift+B.[NEWLINE][NEWLINE]Made for single player first. Multiplayer is untested. Requires Gathering Storm. Don't enable it together with World Bank Loans Dev.</en_US></Text>
+    <Text id="LOC_WBL_DESCRIPTION"><en_US>Version 0.0.0.[NEWLINE]This is an early development build. It hasn't been tested in game yet, so expect bugs and use a throwaway game.[NEWLINE][NEWLINE]Take loans from a shared World Bank and pay them back over time, or deposit gold for a return and investor perks. Your terms depend on your development tier and credit rating. Open Bank on the launch bar or press B (when no settler is selected).[NEWLINE][NEWLINE]Made for single player first. Multiplayer is untested. Requires Gathering Storm. Don't enable it together with World Bank Loans Dev.</en_US></Text>
   </LocalizedText>
   <Files>
     <File>Data/WBL_Notifications.xml</File>

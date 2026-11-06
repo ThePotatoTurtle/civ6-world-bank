@@ -2,38 +2,102 @@
 <!-- Shape: WBL_Dev/UI/WBL_Dev_Panel.xml (EFV_Dev_Panel.xml:5-63), ClimateScreen.xml scroll panel and instances; research/UI_TOOLING.md. Visual layout is S7 PENDING. -->
 <Context Name="WBL_BankPanel">
   <GridButton ID="FallbackButton" Anchor="L,T" Offset="12,150" Size="130,32" Style="MainButton" String="LOC_WBL_UI_BUTTON_OPEN" ToolTip="LOC_WBL_UI_BUTTON_TOOLTIP"/>
-  <Container ID="Main" Anchor="C,C" Size="760,600" Hidden="1" ConsumeMouse="1">
-    <Grid Anchor="C,C" Size="760,600" Style="WindowFrameTitle">
-      <Label ID="TitleLabel" Anchor="C,T" Offset="0,12" Style="WindowHeader" String="LOC_WBL_UI_TITLE"/>
-      <Button ID="CloseButton" Anchor="R,T" Offset="-8,-5" Style="CloseButtonLarge"/>
-      <Stack ID="TabStack" Anchor="L,T" Offset="22,48" StackGrowth="Right" StackPadding="8">
-        <GridButton ID="TabBorrow" Size="150,32" Style="MainButton" String="LOC_WBL_UI_TAB_BORROW"/>
-        <GridButton ID="TabLoans" Size="150,32" Style="MainButton" String="LOC_WBL_UI_TAB_LOANS"/>
-        <GridButton ID="TabInvest" Size="150,32" Style="MainButton" String="LOC_WBL_UI_TAB_INVEST"/>
-        <GridButton ID="TabBank" Size="150,32" Style="MainButton" String="LOC_WBL_UI_TAB_BANK"/>
+  <!-- Modal screen (Session P recheck 2026-11-05: the wheel still did not scroll, and Leon asked for a locked
+       menu like FDT's). The full-screen consumer blocks map clicks and zoom, as ReportScreen.xml:4 and
+       FDT_Panel.xml; Lua queues the context as a popup. -->
+  <Container ID="Main" Size="parent,parent" Hidden="1">
+    <!-- Blocks map clicks and hover but lets the wheel through to the input handler, which scrolls the body and
+         returns true so the map does not zoom. Attribute set from GreatWorksOverview.xml:4, with the wheel left
+         unconsumed. Lua-session-P6.log (2026-11-06): the plain style consumer swallowed the wheel before Lua. -->
+    <Container Style="FullScreenVignetteConsumer" ConsumeAllMouse="0" ConsumeMouseButton="1" ConsumeMouseWheel="0" ConsumeMouseOver="1"/>
+    <Grid ConsumeMouseWheel="0" Anchor="C,C" Size="760,600" Style="WindowFrameTitle">
+      <!-- ConsumeMouseWheel="0" on every control in this window except the ScrollPanel (Leon, 2026-11-06: the wheel
+           scrolled only over the bare ScrollPanel strip right of the rows). Over the scroll area the wheel reaches the
+           ScrollPanel; elsewhere it passes the consumer to the input handler, which scrolls and returns true. -->
+      <Label ConsumeMouseWheel="0" ID="TitleLabel" Anchor="C,T" Offset="0,12" Style="WindowHeader" String="LOC_WBL_UI_TITLE"/>
+      <Button ConsumeMouseWheel="0" ID="CloseButton" Anchor="R,T" Offset="-8,-5" Style="CloseButtonLarge"/>
+      <Stack ConsumeMouseWheel="0" ID="TabStack" Anchor="L,T" Offset="22,48" StackGrowth="Right" StackPadding="8">
+        <!-- Tab pattern from GAME/Base/Assets/UI/Screens/ReportScreen.xml:151-157 (TabButton plus an overlay shown for
+             the selected tab). Session P 2026-11-04: MainButton with SetSelected looked like the background and its text
+             sat too high. 2026-11-05: the overlay uses the tab's hover slice (TabButtonHighlight, Civ6_Styles.xml:786-789)
+             because the TabButtonSelected texture has a light top rim Leon asked to drop. -->
+        <GridButton ConsumeMouseWheel="0" ID="TabBorrow" Size="150,34" Style="TabButton" FontSize="14" TextOffset="0,2" String="LOC_WBL_UI_TAB_BORROW">
+          <Container ConsumeMouseWheel="0" ID="TabBorrowSelected" Size="parent,parent" Hidden="1">
+            <GridButton ConsumeMouseWheel="0" Size="parent,parent" Style="TabSelectedFont" Texture="Controls_Tab" SliceStart="0,34" SliceCorner="21,16" StateOffsetIncrement="0,0" String="LOC_WBL_UI_TAB_BORROW" FontSize="14" TextOffset="0,2" ConsumeMouseButton="0" ConsumeMouseOver="0"/>
+          </Container>
+        </GridButton>
+        <GridButton ConsumeMouseWheel="0" ID="TabLoans" Size="150,34" Style="TabButton" FontSize="14" TextOffset="0,2" String="LOC_WBL_UI_TAB_LOANS">
+          <Container ConsumeMouseWheel="0" ID="TabLoansSelected" Size="parent,parent" Hidden="1">
+            <GridButton ConsumeMouseWheel="0" Size="parent,parent" Style="TabSelectedFont" Texture="Controls_Tab" SliceStart="0,34" SliceCorner="21,16" StateOffsetIncrement="0,0" String="LOC_WBL_UI_TAB_LOANS" FontSize="14" TextOffset="0,2" ConsumeMouseButton="0" ConsumeMouseOver="0"/>
+          </Container>
+        </GridButton>
+        <GridButton ConsumeMouseWheel="0" ID="TabInvest" Size="150,34" Style="TabButton" FontSize="14" TextOffset="0,2" String="LOC_WBL_UI_TAB_INVEST">
+          <Container ConsumeMouseWheel="0" ID="TabInvestSelected" Size="parent,parent" Hidden="1">
+            <GridButton ConsumeMouseWheel="0" Size="parent,parent" Style="TabSelectedFont" Texture="Controls_Tab" SliceStart="0,34" SliceCorner="21,16" StateOffsetIncrement="0,0" String="LOC_WBL_UI_TAB_INVEST" FontSize="14" TextOffset="0,2" ConsumeMouseButton="0" ConsumeMouseOver="0"/>
+          </Container>
+        </GridButton>
+        <GridButton ConsumeMouseWheel="0" ID="TabBank" Size="150,34" Style="TabButton" FontSize="14" TextOffset="0,2" String="LOC_WBL_UI_TAB_BANK">
+          <Container ConsumeMouseWheel="0" ID="TabBankSelected" Size="parent,parent" Hidden="1">
+            <GridButton ConsumeMouseWheel="0" Size="parent,parent" Style="TabSelectedFont" Texture="Controls_Tab" SliceStart="0,34" SliceCorner="21,16" StateOffsetIncrement="0,0" String="LOC_WBL_UI_TAB_BANK" FontSize="14" TextOffset="0,2" ConsumeMouseButton="0" ConsumeMouseOver="0"/>
+          </Container>
+        </GridButton>
       </Stack>
-      <Label ID="StatusLabel" Anchor="L,T" Offset="22,88" Style="BodyTextDark14" WrapWidth="716" String=""/>
-      <ScrollPanel ID="BodyScroll" Anchor="L,T" Offset="22,116" Size="716,466" Vertical="1" AutoScrollBar="1">
-        <Stack ID="BodyStack" Anchor="L,T" Offset="0,0" StackGrowth="Bottom" StackPadding="6"/>
-        <ScrollBar Anchor="R,C" Size="11,parent" AnchorSide="O,I" Offset="-15,0" Style="ScrollVerticalBar"/>
-      </ScrollPanel>
+      <Label ConsumeMouseWheel="0" ID="StatusLabel" Anchor="L,T" Offset="22,88" Style="BodyTextDark14" WrapWidth="716" String=""/>
+      <!-- Height leaves a bottom margin inside the frame corners (Session P 2026-11-04: text clipped the corners).
+           Structure copied from FDT_Panel.xml, whose list wheel-scrolls live (FDT SPIKES session 5): the ScrollPanel
+           sits in a Stack and its ScrollBar is inside it (Slider_Blue, R,T). Our earlier outside ScrollVerticalBar never
+           wheel-scrolled, and the context handler never saw the wheel (Lua-session-P5.log, 2026-11-05). -->
+      <Stack ConsumeMouseWheel="0" Anchor="L,T" Offset="22,116" StackGrowth="Bottom">
+        <!-- Native wheel off (DisableMouseWheelScroll, FrontEnd/MainMenu.xml:23, Screens/GovernmentScreen.xml:219).
+             Lua-session-P9 (2026-11-06): the native wheel scrolled only over the bare panel strip and ate the wheel over
+             rows, while the input handler's SetScrollValue visibly scrolled from the left margin. With it off, the wheel
+             anywhere over the window falls through to the handler. -->
+        <ScrollPanel ID="BodyScroll" Size="716,440" Vertical="1" AutoScrollBar="1" DisableMouseWheelScroll="1">
+          <Stack ConsumeMouseWheel="0" ID="BodyStack" StackGrowth="Bottom" StackPadding="6"/>
+          <ScrollBar ID="BodyScrollBar" Anchor="R,T" Style="Slider_Blue" Size="10,parent"/>
+        </ScrollPanel>
+      </Stack>
     </Grid>
   </Container>
-  <Instance Name="HeaderRow">
-    <Label ID="Text" Anchor="L,T" Style="WindowHeader" WrapWidth="690" String=""/>
+  <!-- Header style B, chosen by Leon on 2026-11-06 after C's tinted strip did not render as mocked: the City-States
+       screen's dark section bar (PartialScreens/CityStates.xml:12, Controls_TitleBarDark) with light FontFlair18 text
+       (no small caps). All four options are kept as ready-to-paste XML in research/UI_HEADER_OPTIONS.md. -->
+  <Instance ConsumeMouseWheel="0" Name="HeaderRow">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="690,36">
+      <!-- Panel navy (Leon, 2026-11-06), the FullScreenVignetteConsumer box colour (Civ6_Styles.xml:2115). -->
+      <Box ConsumeMouseWheel="0" Anchor="L,T" Size="690,34" Color="21,46,75,255">
+        <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,C" Offset="12,0" Style="FontFlair18" FontStyle="glow" Color0="208,212,217,255" Color1="0,0,0,200" WrapWidth="666" String=""/>
+      </Box>
+    </Container>
   </Instance>
-  <Instance Name="TextRow">
-    <Label ID="Text" Anchor="L,T" Style="BodyTextDark14" WrapWidth="690" String=""/>
+  <!-- Extra space above every header after the first (Session P recheck 2026-11-05). -->
+  <Instance ConsumeMouseWheel="0" Name="SpacerRow">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="690,10"/>
   </Instance>
-  <Instance Name="ActionRow">
-    <Container ID="Root" Anchor="L,T" Size="690,41">
-      <Label ID="Text" Anchor="L,C" Style="BodyTextDark14" WrapWidth="430" String=""/>
-      <GridButton ID="Button" Anchor="R,C" Size="240,38" Style="MainButton" String=""/>
+  <Instance ConsumeMouseWheel="0" Name="TextRow">
+    <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,T" Style="BodyTextDark14" WrapWidth="690" String=""/>
+  </Instance>
+  <Instance ConsumeMouseWheel="0" Name="ActionRow">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="690,41">
+      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,C" Style="BodyTextDark14" WrapWidth="430" String=""/>
+      <GridButton ConsumeMouseWheel="0" ID="Button" Anchor="R,C" Size="240,38" Style="MainButton" String=""/>
+    </Container>
+  </Instance>
+  <!-- Option selector: the GenericPullDown button look (Civ6_Styles.xml:432-437), so choices read as choices and
+       only ActionRow's MainButton reads as a confirm. -->
+  <Instance ConsumeMouseWheel="0" Name="SelectorRow">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="690,41">
+      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,C" Style="BodyTextDark14" WrapWidth="430" String=""/>
+      <!-- Same text as MainButton's ButtonText16 (FontNormal16, glow, BodyTextCool; Civ6_Styles.xml:505). -->
+      <GridButton ConsumeMouseWheel="0" ID="Button" Anchor="R,C" Size="240,34" Style="MainMenuSquareButton" FontSize="16" FontStyle="glow" ColorSet="BodyTextCool" String="">
+        <Image ConsumeMouseWheel="0" Texture="PullDown_Corner" TextureOffset="0,0" Offset="3,3" Size="16,16" Anchor="R,B"/>
+        <Image ConsumeMouseWheel="0" ShowOnMouseOver="1" Texture="PullDown_Corner" TextureOffset="0,16" Offset="3,3" Size="16,16" Anchor="R,B"/>
+      </GridButton>
     </Container>
   </Instance>
   <Instance Name="WBL_Bank_LaunchItem">
     <Button ID="LaunchItemButton" Anchor="L,C" Size="49,49" Texture="LaunchBar_Hook_GreatPeopleButton" Style="ButtonNormalText" TextureOffset="0,-1" StateOffsetIncrement="0,49" ToolTip="LOC_WBL_UI_BUTTON_TOOLTIP">
-      <Label Anchor="C,C" Offset="0,1" Style="FontNormal10" Color="255,230,160,255" String="LOC_WBL_UI_LAUNCH_LABEL"/>
+      <Label Anchor="C,C" Offset="0,3" Style="FontNormal10" Color="255,230,160,255" String="LOC_WBL_UI_LAUNCH_LABEL"/>
     </Button>
   </Instance>
   <Instance Name="WBL_Bank_LaunchPin">

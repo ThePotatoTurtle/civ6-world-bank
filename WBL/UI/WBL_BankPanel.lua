@@ -17,17 +17,27 @@ local selection = {milestone = 1}
 local MAX_TECH_OPTIONS = 5 -- Earliest unresearched technologies offered as milestone targets (picker space).
 local PERCENT = 100 -- Fraction to percent for display.
 
-local headerIM = InstanceManager:new("HeaderRow", "Text", Controls.BodyStack)
+local headerIM = InstanceManager:new("HeaderRow", "Root", Controls.BodyStack)
 local textIM = InstanceManager:new("TextRow", "Text", Controls.BodyStack)
 local actionIM = InstanceManager:new("ActionRow", "Root", Controls.BodyStack)
+local selectorIM = InstanceManager:new("SelectorRow", "Root", Controls.BodyStack)
+local spacerIM = InstanceManager:new("SpacerRow", "Root", Controls.BodyStack)
+-- Selector label width inside the 240 px button, leaving room for the pull-down corner mark.
+local SELECTOR_TEXT_WIDTH = 210
+-- Pixels scrolled per wheel notch; the engine reports 120 per notch (WorldInput.lua:1455).
+local WHEEL_PIXELS = 60
+local WHEEL_NOTCH = 120
+-- Rows drawn this build, for the wheel hover check (the hover registers on the control under the pointer).
+local shownRows = {}
 
 local function L(key, ...)
   return Locale.Lookup(key, ...)
 end
 
+-- Whole gold for display only; the bank keeps exact amounts (Leon, Session P 2026-11-04).
 local function Gold(value)
   if type(value) ~= "number" then return "?" end
-  return string.format("%.1f", value)
+  return string.format("%d", math.floor(value + 0.5))
 end
 
 local function Pct(value)
@@ -102,18 +112,36 @@ local function CycleMilestone()
 end
 
 -- Row helpers --------------------------------------------------------------------------------------
+-- Lua-side wheel pass-through (Leon, 2026-11-06: with ConsumeMouseWheel="0" in XML the wheel still scrolled only
+-- off the rows, while the input handler did receive it there). SetConsumeMouseWheel is the control method behind
+-- TunerUtilities.lua:364-369. pcall: a control without the method is left as it is.
+local function PassWheel(control)
+  if control ~= nil then pcall(function() control:SetConsumeMouseWheel(false) end) end
+end
+
+local function TrackRow(row)
+  shownRows[#shownRows + 1] = row
+  PassWheel(row.Root)
+  PassWheel(row.Text)
+  PassWheel(row.Button)
+end
+
 local function Header(text)
+  if #shownRows > 0 then PassWheel(spacerIM:GetInstance().Root) end
   local row = headerIM:GetInstance()
+  TrackRow(row)
   row.Text:SetText(text)
 end
 
 local function Line(text)
   local row = textIM:GetInstance()
+  TrackRow(row)
   row.Text:SetText(text)
 end
 
 local function Action(text, buttonText, reasonKey, onClick)
   local row = actionIM:GetInstance()
+  TrackRow(row)
   row.Text:SetText(text)
   row.Button:SetText(buttonText)
   local waiting = lastView ~= nil and sentNonce ~= nil and lastView.nonce == sentNonce
@@ -126,6 +154,20 @@ local function Action(text, buttonText, reasonKey, onClick)
   else
     row.Button:SetToolTipString("")
   end
+  row.Button:RegisterCallback(Mouse.eLClick, onClick)
+end
+
+-- Option row: cycles a choice in place. Long labels truncate with the full text as tooltip, following
+-- SupportFunctions.lua:17-41 (TruncateString) and :65-72 (WithTooltip).
+local function Selector(text, buttonText, onClick)
+  local row = selectorIM:GetInstance()
+  TrackRow(row)
+  row.Text:SetText(text)
+  local textControl = row.Button:GetTextControl()
+  textControl:SetTruncateWidth(SELECTOR_TEXT_WIDTH)
+  row.Button:SetText(buttonText)
+  row.Button:SetToolTipString(textControl:IsTextTruncated() and buttonText or "")
+  row.Button:SetDisabled(false)
   row.Button:RegisterCallback(Mouse.eLClick, onClick)
 end
 
@@ -167,18 +209,18 @@ local function LoanChooser(key, entry, kind, extra)
   local termIndex = Pick(entry.terms, key, "term")
   local amount = WBL_BANKVIEW.AmountForStep(entry.maxAmount, stepIndex)
   local term = entry.terms[termIndex]
-  Action(L("LOC_WBL_UI_BORROW_AMOUNT", Gold(amount)), L("LOC_WBL_UI_BORROW_AMOUNT_BTN", Gold(amount)), "", function()
+  Selector(L("LOC_WBL_UI_BORROW_AMOUNT", Gold(amount)), L("LOC_WBL_UI_BORROW_AMOUNT_BTN", Gold(amount)), function()
     state.step = state.step + 1
     Redraw()
   end)
-  Action(L("LOC_WBL_UI_BORROW_TERM"), L("LOC_WBL_UI_BORROW_TERM_BTN", term.termStandardTurns), "", function()
+  Selector(L("LOC_WBL_UI_BORROW_TERM"), L("LOC_WBL_UI_BORROW_TERM_BTN", term.termStandardTurns), function()
     state.term = termIndex + 1
     Redraw()
   end)
   local option = CurrentMilestone()
-  Action(entry.milestoneRequired and L("LOC_WBL_UI_BORROW_MILESTONE_REQ", Pct(entry.forgivenessFraction or 0))
+  Selector(entry.milestoneRequired and L("LOC_WBL_UI_BORROW_MILESTONE_REQ", Pct(entry.forgivenessFraction or 0))
       or L("LOC_WBL_UI_BORROW_MILESTONE_OPT", Pct(entry.forgivenessFraction or 0)),
-    L("LOC_WBL_UI_BORROW_MILESTONE_BTN", MilestoneName(option)), "", function()
+    L("LOC_WBL_UI_BORROW_MILESTONE_BTN", MilestoneName(option)), function()
       CycleMilestone()
       Redraw()
     end)
@@ -240,7 +282,7 @@ local function BuildBorrow(view)
     if b.grant.available then
       local option = CurrentMilestone()
       Line(L("LOC_WBL_UI_GRANT_INFO", Gold(b.grant.amount)))
-      Action(L("LOC_WBL_UI_BORROW_MILESTONE_REQ", Pct(0)), L("LOC_WBL_UI_BORROW_MILESTONE_BTN", MilestoneName(option)), "",
+      Selector(L("LOC_WBL_UI_BORROW_MILESTONE_REQ", Pct(0)), L("LOC_WBL_UI_BORROW_MILESTONE_BTN", MilestoneName(option)),
         function() CycleMilestone() Redraw() end)
       local reason = (option == nil or option.kind == "NONE") and "LOC_WBL_UI_REASON_MILESTONE_REQUIRED" or ""
       Action("", L("LOC_WBL_UI_GRANT_BTN"), reason, function()
@@ -269,6 +311,12 @@ local function BuildLoans(view)
     end
   end
   if #l.rows == 0 then Line(L("LOC_WBL_UI_LOANS_NONE")) end
+  -- Total scheduled payments: the top panel's gold breakdown cannot show them (Leon, Session P 2026-11-04).
+  local due = 0
+  for _, row in ipairs(l.rows) do
+    if type(row.nextPayment) == "number" then due = due + row.nextPayment end
+  end
+  if due > 0 then Line(L("LOC_WBL_UI_LOANS_DUE_TOTAL", Gold(due))) end
   for _, row in ipairs(l.rows) do
     Header(L("LOC_WBL_UI_LOAN_HEADER", L(row.productKey), row.loanID))
     if row.isRecovery then Line(L("LOC_WBL_UI_LOAN_RECOVERY", L(row.disasterKey))) end
@@ -293,7 +341,7 @@ local function BuildLoans(view)
       end)
     if row.selectMilestone.available then
       local option = CurrentMilestone()
-      Action(L("LOC_WBL_UI_SELECT_MILESTONE_INFO"), L("LOC_WBL_UI_BORROW_MILESTONE_BTN", MilestoneName(option)), "",
+      Selector(L("LOC_WBL_UI_SELECT_MILESTONE_INFO"), L("LOC_WBL_UI_BORROW_MILESTONE_BTN", MilestoneName(option)),
         function() CycleMilestone() Redraw() end)
       Action("", L("LOC_WBL_UI_SELECT_MILESTONE_BTN"),
         (option == nil or option.kind == "NONE") and "LOC_WBL_UI_REASON_MILESTONE_REQUIRED" or "", function()
@@ -308,7 +356,7 @@ local function BuildLoans(view)
   else
     Line(L("LOC_WBL_UI_RELIEF_INFO", Pct(r.fraction), Gold(r.forgiveAmount)))
     local option = CurrentMilestone()
-    Action("", L("LOC_WBL_UI_BORROW_MILESTONE_BTN", MilestoneName(option)), "", function() CycleMilestone() Redraw() end)
+    Selector("", L("LOC_WBL_UI_BORROW_MILESTONE_BTN", MilestoneName(option)), function() CycleMilestone() Redraw() end)
     local reason = r.reasonKey
     if reason == "" and (option == nil or option.kind == "NONE") then reason = "LOC_WBL_UI_REASON_MILESTONE_REQUIRED" end
     Action("", L("LOC_WBL_UI_RELIEF_BTN"), reason, function() Send("DEBT_RELIEF", {milestone = option}) end)
@@ -338,11 +386,11 @@ local function BuildInvest(view)
     local termIndex = Pick(i.deposit.terms, "DEPOSIT", "term")
     local amount = WBL_BANKVIEW.DepositAmount(i, stepIndex)
     local term = i.deposit.terms[termIndex]
-    Action(L("LOC_WBL_UI_DEPOSIT_REFUSED_NOTE"), L("LOC_WBL_UI_BORROW_AMOUNT_BTN", Gold(amount)), "", function()
+    Selector(L("LOC_WBL_UI_DEPOSIT_REFUSED_NOTE"), L("LOC_WBL_UI_BORROW_AMOUNT_BTN", Gold(amount)), function()
       state.step = stepIndex + 1
       Redraw()
     end)
-    Action("", L("LOC_WBL_UI_BORROW_TERM_BTN", term.termStandardTurns), "", function()
+    Selector("", L("LOC_WBL_UI_BORROW_TERM_BTN", term.termStandardTurns), function()
       state.term = termIndex + 1
       Redraw()
     end)
@@ -432,11 +480,12 @@ end
 
 local BUILDERS = {BORROW = BuildBorrow, LOANS = BuildLoans, INVEST = BuildInvest, BANK = BuildBank}
 
+-- Selected-tab overlay as ReportScreen.lua:1714-1718 (show the selected tab's overlay, hide the others).
 local function SetTabButtons()
-  Controls.TabBorrow:SetSelected(tab == "BORROW")
-  Controls.TabLoans:SetSelected(tab == "LOANS")
-  Controls.TabInvest:SetSelected(tab == "INVEST")
-  Controls.TabBank:SetSelected(tab == "BANK")
+  Controls.TabBorrowSelected:SetHide(tab ~= "BORROW")
+  Controls.TabLoansSelected:SetHide(tab ~= "LOANS")
+  Controls.TabInvestSelected:SetHide(tab ~= "INVEST")
+  Controls.TabBankSelected:SetHide(tab ~= "BANK")
 end
 
 local function Rebuild()
@@ -444,6 +493,9 @@ local function Rebuild()
   headerIM:ResetInstances()
   textIM:ResetInstances()
   actionIM:ResetInstances()
+  selectorIM:ResetInstances()
+  spacerIM:ResetInstances()
+  shownRows = {}
   SetTabButtons()
   local playerID = Game.GetLocalPlayer()
   local state = ReadState()
@@ -472,13 +524,54 @@ local function OnRefresh()
   if open and dirty then Rebuild() end
 end
 
+-- One line per opening: what the scroll controls and the first row of each kind report for wheel, hover and button
+-- consumption (Get* methods behind TunerUtilities.lua:352-369), so a live wheel failure names the control.
+local function ConsumeFlags(control)
+  if control == nil then return "nil" end
+  local ok, flags = pcall(function()
+    return tostring(control:GetConsumeMouseWheel()) .. "/" .. tostring(control:GetConsumeMouseOver()) .. "/" ..
+      tostring(control:GetConsumeMouseButton())
+  end)
+  return ok and flags or "error"
+end
+
+local function ReportWheelConsumers()
+  local parts = {"scroll=" .. ConsumeFlags(Controls.BodyScroll), "bar=" .. ConsumeFlags(Controls.BodyScrollBar),
+    "stack=" .. ConsumeFlags(Controls.BodyStack)}
+  local seen = {}
+  for _, row in ipairs(shownRows) do
+    for _, name in ipairs({"Root", "Text", "Button"}) do
+      local key = tostring(row.kind or "row") .. "." .. name
+      if row[name] ~= nil and not seen[key] then
+        seen[key] = true
+        parts[#parts + 1] = key .. "=" .. ConsumeFlags(row[name])
+      end
+    end
+  end
+  print("[WBL UI] wheel consumers (wheel/over/button) " .. table.concat(parts, " "))
+end
+
+-- Modal open and close as ReportScreen.lua:90-123 and FDT_Panel.lua (QueuePopup / DequeuePopup, vignette anim).
+-- DequeuePopup hides the context; it is shown again so the launch-bar callbacks, the fallback button and the
+-- B hotkey keep working while the panel is closed (the context also hosts them).
 local function SetOpen(value)
+  if value == open then return end
   open = value
   Controls.Main:SetHide(not open)
   if open then
+    if not UIManager:IsInPopupQueue(ContextPtr) then UIManager:QueuePopup(ContextPtr, PopupPriority.Medium) end
+    Controls.ScreenAnimIn:SetToBeginning()
+    Controls.ScreenAnimIn:Play()
+    UI.PlaySound("UI_Screen_Open")
     sentNonce = nil
     dirty = true
     Rebuild()
+    PassWheel(Controls.BodyScrollBar)
+    ReportWheelConsumers()
+  else
+    UI.PlaySound("UI_Screen_Close")
+    UIManager:DequeuePopup(ContextPtr)
+    ContextPtr:SetHide(false)
   end
 end
 
@@ -528,11 +621,61 @@ local function AttachLaunchButton()
   end
 end
 
--- Ctrl+Shift+B toggles (the dev panel uses Ctrl+Shift+D). Esc closes only while open.
+-- B toggles (Leon, 2026-11-05). B is the game's default Found City key (InputActionDefaultGestures), so while
+-- the panel is closed and the selected unit can found a city, B passes through to the game. Settler test as
+-- UnitPanel.lua:2371 (UI.GetHeadSelectedUnit) and SelectedUnit.lua:198 (GameInfo.Units[...].FoundCity).
+-- Esc closes only while open. The dev panel uses Ctrl+Shift+D.
+local function SettlerSelected()
+  local ok, settler = pcall(function()
+    local unit = UI.GetHeadSelectedUnit()
+    if unit == nil then return false end
+    local row = GameInfo.Units[unit:GetUnitType()]
+    return row ~= nil and row.FoundCity == true
+  end)
+  return ok and settler == true
+end
+
+-- FDT_Panel.lua: the hover check must include each row, because only the control under the pointer reports it.
+local function OverBody()
+  if Controls.BodyScroll:HasMouseOver() or Controls.BodyStack:HasMouseOver() then return true end
+  for _, row in ipairs(shownRows) do
+    for _, name in ipairs({"Root", "Text", "Button"}) do
+      local control = row[name]
+      if control ~= nil and control:HasMouseOver() then return true end
+    end
+  end
+  return false
+end
+
 local function OnInput(input)
-  if input:GetMessageType() ~= KeyEvents.KeyUp then return false end
+  local message = input:GetMessageType()
+  -- Wheel over the open panel scrolls the body (Session P 2026-11-04: it did not). Reads as DiplomacyRibbon.lua:394
+  -- (GetScrollValue), DiplomacyActionView.lua:1767-1770 (GetSizeY, GetRatio), CivilopediaSupport.lua:770
+  -- (SetScrollValue), NotificationPanel.lua:818 (HasMouseOver), WorldInput.lua:1455 and :3803 (GetWheel, MouseWheel).
+  -- Modal: the body is the only scrollable thing on screen, so any wheel scrolls it (Session P recheck
+  -- 2026-11-05: the hover check never fired, likely because bare labels report no hover). The first wheel per
+  -- opening is logged so a live failure shows whether the handler saw it.
+  if message == MouseEvents.MouseWheel and open then
+    local ratio = Controls.BodyScroll:GetRatio()
+    local before = Controls.BodyScroll:GetScrollValue()
+    if type(ratio) == "number" and ratio > 0 and ratio < 1 then
+      local visible = Controls.BodyScroll:GetSizeY()
+      local hidden = visible / ratio - visible
+      local value = Controls.BodyScroll:GetScrollValue() - (input:GetWheel() / WHEEL_NOTCH) * WHEEL_PIXELS / hidden
+      Controls.BodyScroll:SetScrollValue(math.max(0, math.min(1, value)))
+    end
+    -- Every wheel event the handler sees, for the live check (Leon, 2026-11-06).
+    print("[WBL UI] wheel received delta=" .. tostring(input:GetWheel()) .. " ratio=" .. tostring(ratio) ..
+      " before=" .. tostring(before) .. " after=" .. tostring(Controls.BodyScroll:GetScrollValue()) ..
+      " over=" .. tostring(OverBody()) .. " overScroll=" .. tostring(Controls.BodyScroll:HasMouseOver()))
+    return true
+  end
+  -- Open: every other key is swallowed so map panning and other screens' hotkeys can't fire underneath
+  -- (FDT_Panel.lua; EndGameMenu.lua:494-512 swallows KeyDown and KeyUp the same way).
+  if message ~= KeyEvents.KeyUp then return open and message == KeyEvents.KeyDown end
   local key = input:GetKey()
-  if key == Keys.B and input:IsControlDown() and input:IsShiftDown() then
+  if key == Keys.B and not input:IsControlDown() and not input:IsShiftDown() and not input:IsAltDown() then
+    if not open and SettlerSelected() then return false end
     Toggle()
     return true
   end
@@ -540,7 +683,7 @@ local function OnInput(input)
     SetOpen(false)
     return true
   end
-  return false
+  return open
 end
 
 local function OnViewReady()
@@ -570,4 +713,4 @@ Controls.TabBank:RegisterCallback(Mouse.eLClick, function() SetTab("BANK") end)
 Events.LoadGameViewStateDone.Add(OnViewReady)
 Events.GameCoreEventPublishComplete.Add(MarkDirty)
 Events.PlayerTurnActivated.Add(MarkDirty)
-print("[WBL UI] bank panel ready; Ctrl+Shift+B; S7 PENDING")
+print("[WBL UI] bank panel ready; B; S7 PENDING")
