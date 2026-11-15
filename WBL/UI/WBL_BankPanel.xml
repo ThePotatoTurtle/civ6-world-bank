@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Shape: WBL_Dev/UI/WBL_Dev_Panel.xml (EFV_Dev_Panel.xml:5-63), ClimateScreen.xml scroll panel and instances; research/UI_TOOLING.md. Visual layout is S7 PENDING. -->
+<!-- Shape: WBL_Dev/UI/WBL_Dev_Panel.xml (EFV_Dev_Panel.xml:5-63), ClimateScreen.xml scroll panel and instances; research/UI_TOOLING.md.
+     Stage 5 redesign (Leon approved the mock-up, 2026-11-08): shipped controls and textures, plus two custom textures
+     (WBL/Textures, tools/make_textures.py). Not yet seen in game. -->
 <Context Name="WBL_BankPanel">
   <GridButton ID="FallbackButton" Anchor="L,T" Offset="12,150" Size="130,32" Style="MainButton" String="LOC_WBL_UI_BUTTON_OPEN" ToolTip="LOC_WBL_UI_BUTTON_TOOLTIP"/>
   <!-- Modal screen (Session P recheck 2026-11-05: the wheel still did not scroll, and Leon asked for a locked
@@ -10,12 +12,18 @@
          returns true so the map does not zoom. Attribute set from GreatWorksOverview.xml:4, with the wheel left
          unconsumed. Lua-session-P6.log (2026-11-06): the plain style consumer swallowed the wheel before Lua. -->
     <Container Style="FullScreenVignetteConsumer" ConsumeAllMouse="0" ConsumeMouseButton="1" ConsumeMouseWheel="0" ConsumeMouseOver="1"/>
-    <Grid ConsumeMouseWheel="0" Anchor="C,C" Size="760,600" Style="WindowFrameTitle">
+    <Grid ConsumeMouseWheel="0" Anchor="C,C" Size="760,660" Style="WindowFrameTitle">
       <!-- ConsumeMouseWheel="0" on every control in this window except the ScrollPanel (Leon, 2026-11-06: the wheel
            scrolled only over the bare ScrollPanel strip right of the rows). Over the scroll area the wheel reaches the
            ScrollPanel; elsewhere it passes the consumer to the input handler, which scrolls and returns true. -->
       <Label ConsumeMouseWheel="0" ID="TitleLabel" Anchor="C,T" Offset="0,12" Style="WindowHeader" String="LOC_WBL_UI_TITLE"/>
       <Button ConsumeMouseWheel="0" ID="CloseButton" Anchor="R,T" Offset="-8,-5" Style="CloseButtonLarge"/>
+      <!-- Stage 5 item 1: net gold per turn after the bank's own payments, which the top bar can't show. Gold text as
+           the top panel's gold yield (TopPanel.lua:148-151, ResGoldLabelCS). -->
+      <Container ConsumeMouseWheel="0" ID="IncomeArea" Anchor="R,T" Offset="58,8" Size="230,40">
+        <Label ConsumeMouseWheel="0" ID="IncomeLabel" Anchor="R,T" Style="FontNormal18" ColorSet="ResGoldLabelCS" FontStyle="stroke" String=""/>
+        <Label ConsumeMouseWheel="0" ID="IncomeSub" Anchor="R,T" Offset="0,22" Style="FontNormal12" Color="208,212,217,255" String=""/>
+      </Container>
       <Stack ConsumeMouseWheel="0" ID="TabStack" Anchor="L,T" Offset="22,48" StackGrowth="Right" StackPadding="8">
         <!-- Tab pattern from GAME/Base/Assets/UI/Screens/ReportScreen.xml:151-157 (TabButton plus an overlay shown for
              the selected tab). Session P 2026-11-04: MainButton with SetSelected looked like the background and its text
@@ -52,12 +60,27 @@
              Lua-session-P9 (2026-11-06): the native wheel scrolled only over the bare panel strip and ate the wheel over
              rows, while the input handler's SetScrollValue visibly scrolled from the left margin. With it off, the wheel
              anywhere over the window falls through to the handler. -->
-        <ScrollPanel ID="BodyScroll" Size="716,440" Vertical="1" AutoScrollBar="1" DisableMouseWheelScroll="1">
+        <ScrollPanel ID="BodyScroll" Size="716,500" Vertical="1" AutoScrollBar="1" DisableMouseWheelScroll="1">
           <Stack ConsumeMouseWheel="0" ID="BodyStack" StackGrowth="Bottom" StackPadding="6"/>
           <ScrollBar ID="BodyScrollBar" Anchor="R,T" Style="Slider_Blue" Size="10,parent"/>
         </ScrollPanel>
       </Stack>
     </Grid>
+    <!-- Stage 5 item 8: asks before a loan that would push payments above income. Dimmed backing as the vignette
+         consumer; frame and buttons as the panel window (WindowFrameTitle, MainButton). -->
+    <Container ID="Confirm" Size="parent,parent" Hidden="1">
+      <Box Size="parent,parent" Color="0,0,0,170" ConsumeMouseButton="1" ConsumeMouseOver="1"/>
+      <Grid Anchor="C,C" Size="540,330" Style="WindowFrameTitle">
+        <Label ID="ConfirmTitle" Anchor="C,T" Offset="0,12" Style="WindowHeader" String="LOC_WBL_UI_WARN_TITLE"/>
+        <Stack Anchor="L,T" Offset="28,58" StackGrowth="Bottom" StackPadding="10">
+          <Label ID="ConfirmText" Style="BodyTextDark16" WrapWidth="484" String=""/>
+          <Label ID="ConfirmLines" Style="FontNormal16" Color="208,212,217,255" WrapWidth="484" String=""/>
+          <Label ID="ConfirmNote" Style="FontNormal14" Color="168,180,194,255" WrapWidth="484" String="LOC_WBL_UI_WARN_NOTE"/>
+        </Stack>
+        <GridButton ID="ConfirmCancel" Anchor="L,B" Offset="28,24" Size="230,40" Style="MainButton" String="LOC_WBL_UI_WARN_CANCEL"/>
+        <GridButton ID="ConfirmOk" Anchor="R,B" Offset="28,24" Size="230,40" Style="MainButton" String="LOC_WBL_UI_WARN_OK"/>
+      </Grid>
+    </Container>
   </Container>
   <!-- Header style B, chosen by Leon on 2026-11-06 after C's tinted strip did not render as mocked: the City-States
        screen's dark section bar (PartialScreens/CityStates.xml:12, Controls_TitleBarDark) with light FontFlair18 text
@@ -75,23 +98,118 @@
     <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="690,10"/>
   </Instance>
   <Instance ConsumeMouseWheel="0" Name="TextRow">
-    <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,T" Style="BodyTextDark14" WrapWidth="690" String=""/>
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="666,22">
+      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,T" Style="BodyTextDark16" WrapWidth="634" String=""/>
+      <!-- Hover mark (custom texture in the GoldMetal colour, tools/make_textures.py). -->
+      <Image ConsumeMouseWheel="0" ID="Info" Anchor="R,T" Offset="0,1" Size="18,18" Texture="WBL_InfoBadge.dds" Hidden="1"/>
+    </Container>
+  </Instance>
+  <!-- Screenshot item 22: "(i) Hover a mark like this for more details", the mark first. -->
+  <Instance ConsumeMouseWheel="0" Name="HintRow">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="678,22">
+      <Image ConsumeMouseWheel="0" ID="Info" Anchor="L,T" Offset="0,1" Size="18,18" Texture="WBL_InfoBadge.dds"/>
+      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,T" Offset="26,0" Style="BodyTextDark16" WrapWidth="640" String=""/>
+    </Container>
+  </Instance>
+  <!-- Stage 5 cards: the item frame of the espionage chooser (Choosers/EspionageChooser.xml:23, Controls_ItemContainer,
+       SliceCorner 8,8 / SliceTextureSize 16,16), holding its own stack of rows. Lua sizes it to the stack. -->
+  <Instance ConsumeMouseWheel="0" Name="CardRow">
+    <Grid ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="690,40" Texture="Controls_ItemContainer" SliceCorner="8,8" SliceTextureSize="16,16">
+      <Stack ConsumeMouseWheel="0" ID="Stack" Anchor="L,T" Offset="12,10" StackGrowth="Bottom" StackPadding="6"/>
+    </Grid>
+  </Instance>
+  <!-- Card title, with a status tag (item 7) and an optional hover mark. Tag: the same frame, tinted. -->
+  <Instance ConsumeMouseWheel="0" Name="CardHeader">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="666,30">
+      <Stack ConsumeMouseWheel="0" Anchor="L,C" StackGrowth="Right" StackPadding="10">
+        <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,C" Style="FontFlair18" FontStyle="glow" ColorSet="ResGoldLabelCS" String=""/>
+        <Label ConsumeMouseWheel="0" ID="Sub" Anchor="L,C" Style="FontNormal14" Color="168,180,194,255" String=""/>
+      </Stack>
+      <Stack ConsumeMouseWheel="0" Anchor="R,C" StackGrowth="Left" StackPadding="8">
+        <Image ConsumeMouseWheel="0" ID="Info" Anchor="R,C" Size="18,18" Texture="WBL_InfoBadge.dds" Hidden="1"/>
+        <!-- Screenshot item 3: the frame tint didn't show, so a solid box in the tag's colour sits inside the frame.
+             Lua sizes both to the text. -->
+        <Grid ConsumeMouseWheel="0" ID="Pill" Anchor="R,C" Size="80,24" Texture="Controls_ItemContainer" SliceCorner="8,8" SliceTextureSize="16,16" Hidden="1">
+          <Box ConsumeMouseWheel="0" ID="PillBack" Anchor="C,C" Size="76,20" Color="58,112,182,255"/>
+          <Label ConsumeMouseWheel="0" ID="PillText" Anchor="C,C" Style="FontNormal14" FontStyle="shadow" String=""/>
+        </Grid>
+      </Stack>
+    </Container>
+  </Instance>
+  <!-- Two actions side by side, each with its refusal line under it (items 6 and 9). -->
+  <Instance ConsumeMouseWheel="0" Name="ButtonPairRow">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="666,66">
+      <GridButton ConsumeMouseWheel="0" ID="Button" Anchor="L,T" Size="326,40" Style="MainButton" String=""/>
+      <!-- Screenshot item 23: refusal notes bigger, bold and brighter. -->
+      <Label ConsumeMouseWheel="0" ID="Note" Anchor="L,T" Offset="4,43" Style="FontNormalBold14" FontStyle="shadow" Color0="255,132,108,255" Color1="0,0,0,220" WrapWidth="318" String=""/>
+      <GridButton ConsumeMouseWheel="0" ID="Button2" Anchor="R,T" Size="326,40" Style="MainButton" String=""/>
+      <Label ConsumeMouseWheel="0" ID="Note2" Anchor="L,T" Offset="344,43" Style="FontNormalBold14" FontStyle="shadow" Color0="255,132,108,255" Color1="0,0,0,220" WrapWidth="318" String=""/>
+    </Container>
+  </Instance>
+  <!-- Three per row, wrapping (item 11): StackGrowth Right with WrapWidth and WrapGrowth Bottom, as
+       Choosers/TradeRouteChooser.xml:36, 45, 179. -->
+  <Instance ConsumeMouseWheel="0" Name="GridRow">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="666,40">
+      <Stack ConsumeMouseWheel="0" ID="Stack" Anchor="L,T" StackGrowth="Right" WrapWidth="666" WrapGrowth="Bottom" StackPadding="8"/>
+    </Container>
+  </Instance>
+  <Instance ConsumeMouseWheel="0" Name="GridButtonCell">
+    <GridButton ConsumeMouseWheel="0" ID="Button" Size="216,40" Style="MainButton" String=""/>
+  </Instance>
+  <!-- Benefit tile (item 2): an item frame with a title and one status line. Screenshot item 17: three in one row
+       (3 x 208 + 2 x 8 = 640 of the 666 px row; at 216 they wrapped). Fix 4: an active tile shows the green Lit box. -->
+  <Instance ConsumeMouseWheel="0" Name="TileCell">
+    <Grid ConsumeMouseWheel="0" ID="Root" Size="208,62" Texture="Controls_ItemContainer" SliceCorner="8,8" SliceTextureSize="16,16">
+      <Box ConsumeMouseWheel="0" ID="Lit" Anchor="C,C" Size="202,56" Color="54,120,70,255" Hidden="1"/>
+      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,T" Offset="10,8" Style="FontNormal16" Color="236,230,214,255" WrapWidth="188" String=""/>
+      <Label ConsumeMouseWheel="0" ID="Sub" Anchor="L,T" Offset="10,34" Style="FontNormal12" Color="168,180,194,255" WrapWidth="188" String=""/>
+    </Grid>
+  </Instance>
+  <!-- Ownership pie (item 12): one Meter per shareholder over a white ring texture, tinted with the civ's colour
+       and filled radially by Percent (Meter as LaunchBar.xml:15), largest share's emblem in the hole
+       (IconManager:FindIconAtlas and UI.GetPlayerColors as Instances/CivilizationIcon.lua:56-77). -->
+  <Instance ConsumeMouseWheel="0" Name="PieRow">
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="666,140">
+      <Container ConsumeMouseWheel="0" ID="Pie" Anchor="L,C" Offset="6,0" Size="128,128">
+        <Image ConsumeMouseWheel="0" Anchor="C,C" Size="51,51" Texture="Controls_CircleBacking45"/>
+        <Image ConsumeMouseWheel="0" ID="Emblem" Anchor="C,C" Size="44,44"/>
+        <Meter ConsumeMouseWheel="0" ID="Slice8" Anchor="C,C" Size="128,128" Texture="WBL_PieRing.dds" Percent="0" Speed="0" Follow="1"/>
+        <Meter ConsumeMouseWheel="0" ID="Slice7" Anchor="C,C" Size="128,128" Texture="WBL_PieRing.dds" Percent="0" Speed="0" Follow="1"/>
+        <Meter ConsumeMouseWheel="0" ID="Slice6" Anchor="C,C" Size="128,128" Texture="WBL_PieRing.dds" Percent="0" Speed="0" Follow="1"/>
+        <Meter ConsumeMouseWheel="0" ID="Slice5" Anchor="C,C" Size="128,128" Texture="WBL_PieRing.dds" Percent="0" Speed="0" Follow="1"/>
+        <Meter ConsumeMouseWheel="0" ID="Slice4" Anchor="C,C" Size="128,128" Texture="WBL_PieRing.dds" Percent="0" Speed="0" Follow="1"/>
+        <Meter ConsumeMouseWheel="0" ID="Slice3" Anchor="C,C" Size="128,128" Texture="WBL_PieRing.dds" Percent="0" Speed="0" Follow="1"/>
+        <Meter ConsumeMouseWheel="0" ID="Slice2" Anchor="C,C" Size="128,128" Texture="WBL_PieRing.dds" Percent="0" Speed="0" Follow="1"/>
+        <Meter ConsumeMouseWheel="0" ID="Slice1" Anchor="C,C" Size="128,128" Texture="WBL_PieRing.dds" Percent="0" Speed="0" Follow="1"/>
+      </Container>
+      <Stack ConsumeMouseWheel="0" ID="Legend" Anchor="L,T" Offset="156,8" StackGrowth="Bottom" StackPadding="6"/>
+    </Container>
+  </Instance>
+  <Instance ConsumeMouseWheel="0" Name="LegendLine">
+    <Container ConsumeMouseWheel="0" ID="Root" Size="500,20">
+      <Box ConsumeMouseWheel="0" ID="Swatch" Anchor="L,C" Size="12,12" Color="255,255,255,255"/>
+      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,C" Offset="20,0" Style="FontNormal16" Color="236,230,214,255" String=""/>
+    </Container>
   </Instance>
   <Instance ConsumeMouseWheel="0" Name="ActionRow">
-    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="690,41">
-      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,C" Style="BodyTextDark14" WrapWidth="430" String=""/>
-      <GridButton ConsumeMouseWheel="0" ID="Button" Anchor="R,C" Size="240,38" Style="MainButton" String=""/>
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="666,62">
+      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,T" Offset="0,10" Style="BodyTextDark14" WrapWidth="400" String=""/>
+      <GridButton ConsumeMouseWheel="0" ID="Button" Anchor="R,T" Size="250,40" Style="MainButton" String=""/>
+      <!-- Refusal of the last request this button sent (item 9); bigger, bold and brighter (screenshot item 23). -->
+      <Label ConsumeMouseWheel="0" ID="Note" Anchor="R,T" Offset="0,43" Style="FontNormalBold14" FontStyle="shadow" Color0="255,132,108,255" Color1="0,0,0,220" String=""/>
     </Container>
   </Instance>
   <!-- Option selector: the GenericPullDown button look (Civ6_Styles.xml:432-437), so choices read as choices and
        only ActionRow's MainButton reads as a confirm. -->
   <Instance ConsumeMouseWheel="0" Name="SelectorRow">
-    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="690,41">
-      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,C" Style="BodyTextDark14" WrapWidth="430" String=""/>
+    <Container ConsumeMouseWheel="0" ID="Root" Anchor="L,T" Size="666,41">
+      <Label ConsumeMouseWheel="0" ID="Text" Anchor="L,C" Style="BodyTextDark16" WrapWidth="400" String=""/>
       <!-- Same text as MainButton's ButtonText16 (FontNormal16, glow, BodyTextCool; Civ6_Styles.xml:505). -->
-      <GridButton ConsumeMouseWheel="0" ID="Button" Anchor="R,C" Size="240,34" Style="MainMenuSquareButton" FontSize="16" FontStyle="glow" ColorSet="BodyTextCool" String="">
-        <Image ConsumeMouseWheel="0" Texture="PullDown_Corner" TextureOffset="0,0" Offset="3,3" Size="16,16" Anchor="R,B"/>
-        <Image ConsumeMouseWheel="0" ShowOnMouseOver="1" Texture="PullDown_Corner" TextureOffset="0,16" Offset="3,3" Size="16,16" Anchor="R,B"/>
+      <!-- Screenshot item 2: real arrows, the shipped arrow button images (Civ6_Styles.xml:765-766 ArrowButtonLeft/Right,
+           as EspionageChooser.xml:22, 31), drawn at both ends; a click anywhere cycles. -->
+      <GridButton ConsumeMouseWheel="0" ID="Button" Anchor="R,C" Size="250,36" Style="MainMenuSquareButton" FontSize="16" FontStyle="glow" ColorSet="BodyTextCool" String="">
+        <Image ConsumeMouseWheel="0" ID="ArrowLeft" Anchor="L,C" Offset="8,0" Size="19,23" Texture="Controls_ArrowButtonLeft" TextureOffset="0,0"/>
+        <Image ConsumeMouseWheel="0" ID="ArrowRight" Anchor="R,C" Offset="8,0" Size="19,23" Texture="Controls_ArrowButtonRight" TextureOffset="0,0"/>
       </GridButton>
     </Container>
   </Instance>

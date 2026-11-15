@@ -3,7 +3,9 @@
 --
 -- Decide(playerFacts, offers, recoveryOffers, config) -> params or nil, reason[, detail]
 --   playerFacts: {playerID, isHuman, gold, netGPT, activeLoans, arrears (overdue gold >= 0),
---                 rating ("A".."D"), frozen (bool), inDefault (bool), tier, liquidityTier (optional)}
+--                 rating ("A".."D"), frozen (bool), inDefault (bool), tier, liquidityTier (optional),
+--                 scale (turn scale > 0), unit (U > 0), scheduledPayment (gold per game turn due on
+--                 the AI's active loans, >= 0)}
 --   offers: the player's published offers view (PLAN "Offers view"): blockedReason, availableDraw,
 --           tier, liquidityTier, products[] {product, available, reason, maxAmount, quotedV, terms[]}
 --   recoveryOffers: array of {entitlementID, expiryTurn, maxAmount, quotedV, blockedReason, terms[]};
@@ -12,13 +14,15 @@
 --           WBL_BankView.BuildRequest for TAKE_LOAN / CLAIM_RECOVERY.
 -- Reason codes: OK, AI_DISABLED, NOT_AI, BAD_FACTS, IN_DEFAULT, ARREARS, FROZEN, RATING_D,
 --   LIQUIDITY_EMERGENCY, MAX_LOANS, NO_TRIGGER, NO_OFFER, OFFER_BLOCKED (detail = reducer reason),
---   PRODUCT_BLOCKED (detail = reducer reason), NO_DRAW, TERM_UNAVAILABLE.
+--   PRODUCT_BLOCKED (detail = reducer reason), NO_DRAW, TERM_UNAVAILABLE, PAYMENT_CAP (decision 51:
+--   the loan that fits half of net GPT is under minLoanUnits x U; detail NO_RATE when the term row has
+--   no published rate).
 WBL_AIPOLICY = {}
 local M = WBL_AIPOLICY
 
 M.REASONS = {"OK", "AI_DISABLED", "NOT_AI", "BAD_FACTS", "IN_DEFAULT", "ARREARS", "FROZEN", "RATING_D",
   "LIQUIDITY_EMERGENCY", "MAX_LOANS", "NO_TRIGGER", "NO_OFFER", "OFFER_BLOCKED", "PRODUCT_BLOCKED",
-  "NO_DRAW", "TERM_UNAVAILABLE"}
+  "NO_DRAW", "TERM_UNAVAILABLE", "PAYMENT_CAP"}
 
 local function finite(value)
   return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
@@ -44,6 +48,30 @@ local function hasTerm(terms, term)
     if terms[i].termStandardTurns == term then return true end
   end
   return false
+end
+
+-- The published term row for the standard-turn term, or nil.
+local function termRow(terms, term)
+  if type(terms) ~= "table" then return nil end
+  for i = 1, #terms do
+    if terms[i].termStandardTurns == term then return terms[i] end
+  end
+  return nil
+end
+
+-- Decision 51: shrink `amount` so all scheduled payments stay within the share of net GPT.
+-- Returns the fitted whole-gold amount, or nil and the refusal detail.
+local function fitPayments(amount, facts, terms, term, config)
+  local row = termRow(terms, term)
+  if not (row and finite(row.nominalRate) and row.nominalRate >= 0 and finite(row.paymentTurns)
+      and row.paymentTurns >= 1) then
+    return nil, "NO_RATE"
+  end
+  local most = WBL_MATH.AIPaymentCapPrincipal(facts.netGPT, facts.scheduledPayment, row.nominalRate,
+    row.paymentTurns, config)
+  local fitted = math.floor(math.min(amount, most))
+  if fitted <= 0 or fitted < config.ai.minLoanUnits * facts.unit then return nil, "" end
+  return fitted
 end
 
 local function cap(amount, limit)
@@ -84,7 +112,9 @@ function M.Decide(facts, offers, recoveryOffers, config)
   if type(facts) ~= "table" then return nil, "BAD_FACTS" end
   if facts.isHuman then return nil, "NOT_AI" end
   if not (finite(facts.gold) and facts.gold >= 0 and finite(facts.netGPT) and finite(facts.activeLoans)
-      and facts.activeLoans >= 0 and (facts.arrears == nil or (finite(facts.arrears) and facts.arrears >= 0))) then
+      and facts.activeLoans >= 0 and (facts.arrears == nil or (finite(facts.arrears) and facts.arrears >= 0))
+      and finite(facts.scale) and facts.scale > 0 and finite(facts.unit) and facts.unit > 0
+      and finite(facts.scheduledPayment) and facts.scheduledPayment >= 0) then
     return nil, "BAD_FACTS"
   end
   if facts.inDefault then return nil, "IN_DEFAULT" end
@@ -104,7 +134,7 @@ function M.Decide(facts, offers, recoveryOffers, config)
 
   local draw = offers.availableDraw
   if not (finite(draw) and draw > 0) then return nil, "NO_DRAW" end
-  local requested = math.min(WBL_MATH.AILoanAmount(facts.netGPT, config), draw)
+  local requested = math.min(WBL_MATH.AILoanAmount(facts.netGPT, config, facts.scale), draw)
   local term = config.ai.termStandardTurns
 
   local ordinary = findProduct(offers, "ORDINARY")
@@ -118,7 +148,9 @@ function M.Decide(facts, offers, recoveryOffers, config)
     local terms = ro.terms or (recoveryProduct and recoveryProduct.terms)
     local amount = math.floor(cap(requested, ro.maxAmount))
     if (not ordinaryOpen or ro.quotedV < ordinary.quotedV) and amount > 0 and hasTerm(terms, term) then
-      return {kind = "CLAIM_RECOVERY", entitlementID = ro.entitlementID, amount = amount,
+      local fitted, why = fitPayments(amount, facts, terms, term, config)
+      if not fitted then return nil, "PAYMENT_CAP", why end
+      return {kind = "CLAIM_RECOVERY", entitlementID = ro.entitlementID, amount = fitted,
         termStandardTurns = term, quotedV = ro.quotedV,
         milestoneKind = "NONE", milestoneTarget = "", milestoneCityID = 0}, "OK"
     end
@@ -129,7 +161,9 @@ function M.Decide(facts, offers, recoveryOffers, config)
   local amount = math.floor(cap(requested, ordinary.maxAmount))
   if amount <= 0 then return nil, "NO_DRAW" end
   if not hasTerm(ordinary.terms, term) then return nil, "TERM_UNAVAILABLE" end
-  return {kind = "TAKE_LOAN", product = "ORDINARY", amount = amount, termStandardTurns = term,
+  local fitted, why = fitPayments(amount, facts, ordinary.terms, term, config)
+  if not fitted then return nil, "PAYMENT_CAP", why end
+  return {kind = "TAKE_LOAN", product = "ORDINARY", amount = fitted, termStandardTurns = term,
     quotedV = ordinary.quotedV, milestoneKind = "NONE", milestoneTarget = "", milestoneCityID = 0}, "OK"
 end
 

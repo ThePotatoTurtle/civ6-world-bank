@@ -10,3 +10,4 @@
 *.md text eol=lf
 *.json text eol=lf
 *.ps1 text eol=lf
+*.dds binary

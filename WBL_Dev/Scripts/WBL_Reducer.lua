@@ -26,7 +26,7 @@ R.PHASES = {"growth", "reserve", "tiers", "maturities", "arrears", "scheduled", 
 R.NOTIFICATIONS = {"LOAN_TAKEN", "PAYMENT_MISSED", "ARREARS_WARNING", "DEFAULT_STAGE1", "DEFAULT_STAGE2",
   "DEFAULT_CLEARED", "RESTRUCTURED", "DEBT_RELIEF", "MILESTONE_COMPLETE", "DEPOSIT_MATURED", "WITHDRAWAL",
   "PRESIDENT_GAINED", "PRESIDENT_LOST", "FREEZE_PLACED", "FREEZE_LIFTED", "RECOVERY_OFFER",
-  "RECOVERY_CLAIMED", "RECOVERY_EXPIRED", "GRANT_PAID", "TIER_CHANGED"}
+  "RECOVERY_CLAIMED", "RECOVERY_EXPIRED", "GRANT_PAID", "TIER_CHANGED", "PAYOFF_AVAILABLE", "ARREARS_WARNING_AGAIN"}
 R.REQUEST_KINDS = {"TAKE_LOAN", "CLAIM_RECOVERY", "REPAY_EARLY", "RESTRUCTURE", "DEBT_RELIEF",
   "SELECT_MILESTONE", "REQUEST_GRANT", "DEPOSIT", "WITHDRAW", "FREEZE_PLACE", "FREEZE_LIFT"}
 -- Ledger purposes: bank.totals field and cash direction (R2, R6).
@@ -169,10 +169,17 @@ local function syncLoans(state, playerID)
   for i = 1, #loans do syncLoan(state, loans[i]) end
 end
 
-local function purgeLots(state)
+-- Decision 48: an amount smaller than one treasury step (1/256 gold) is float residue, not gold.
+local function isDust(amount, config)
+  return math.abs(amount) < config.precision.treasuryResolution
+end
+
+-- A lot left with less than one treasury step is settled (decision 48).
+local function purgeLots(state, config)
   local kept = {}
   for i = 1, #state.lots do
-    if lotTotal(state.lots[i]) > 0 then kept[#kept + 1] = state.lots[i] end
+    local total = lotTotal(state.lots[i])
+    if total > 0 and not isDust(total, config) then kept[#kept + 1] = state.lots[i] end
   end
   state.lots = kept
 end
@@ -240,6 +247,7 @@ end
 
 local function balanceEffect(ctx, kind, balances, playerID, amount, reason, ids, required)
   if amount == 0 then return nil end
+  if kind == "GOLD" and isDust(amount, ctx.config) then return nil end -- decision 48 backstop
   local before = balances[playerID] or 0
   balances[playerID] = before + amount
   return pushEffect(ctx, {kind = kind, playerID = playerID, amount = amount, expectedBefore = before,
@@ -260,7 +268,7 @@ local function counterEffect(ctx, kind, playerID, amount, reason)
 end
 
 local function move(ctx, purpose, playerID, amount, ids)
-  if amount == 0 then return end
+  if amount == 0 or isDust(amount, ctx.config) then return end -- decision 48 backstop
   local spec = R.MOVEMENTS[purpose]
   local bank = ctx.state.bank
   ids = ids or {}
@@ -277,6 +285,14 @@ local function notify(ctx, name, playerID, onceKey, p1, p2, p3, p4)
     p1 = p1 or "", p2 = p2 or "", p3 = p3 or "", p4 = p4 or ""}
 end
 
+-- Decision 57: a notification about one loan names it as "Loan #ID (principal gold, N turns)":
+-- p1 loan ID, p2 original principal, p3 payment turns (game turns), p4 the message's own value.
+-- The NOTIFY effect also carries the loan ID.
+local function notifyLoan(ctx, name, loan, onceKey, p4)
+  notify(ctx, name, loan.playerID, onceKey, loan.loanID, loan.principal, loan.paymentTurns, p4)
+  ctx.notes[#ctx.notes].loanID = loan.loanID
+end
+
 local function flushNotes(ctx)
   local sent = 0
   for i = 1, #ctx.notes do
@@ -287,7 +303,7 @@ local function flushNotes(ctx)
       sent = sent + 1
       pushEffect(ctx, {kind = "NOTIFY", playerID = n.playerID, reason = n.name,
         messageKey = NOTIFY_PREFIX .. n.name .. "_MESSAGE", p1 = n.p1, p2 = n.p2, p3 = n.p3, p4 = n.p4,
-        onceKey = n.onceKey})
+        onceKey = n.onceKey}, n.loanID and {loanID = n.loanID} or nil)
     end
   end
   ctx.notes = {}
@@ -332,7 +348,7 @@ local function applyAllocation(ctx, playerID, allocation, purpose)
     local lot = findBy(s.lots, "lotID", copy.lotID)
     lot.principal, lot.interest, lot.fees = copy.principal, copy.interest, copy.fees
   end
-  purgeLots(s)
+  purgeLots(s, ctx.config)
   syncLoans(s, playerID)
   return paid
 end
@@ -341,7 +357,7 @@ end
 -- budget rather than the debt lets full settlement clear every lot exactly.
 local function payArrears(ctx, playerID, budget, purpose, reason)
   local lots = playerLots(ctx.state, playerID)
-  if #lots == 0 or budget <= 0 then return 0 end
+  if #lots == 0 or budget <= 0 or isDust(budget, ctx.config) then return 0 end
   local allocation = WBL_MATH.AllocateArrearsPayment(lots, budget, ctx.config)
   local paid = applyAllocation(ctx, playerID, allocation, purpose)
   paid = math.min(paid, available(ctx, ctx.gold, playerID))
@@ -429,8 +445,12 @@ local function borrowContext(ctx, playerID)
   bc.E = math.min(p.eligibleCapital, measureE(ctx, playerID))
   bc.outstanding = outstandingPrincipal(s, playerID)
   bc.normalLimit, bc.extension = 0, 0
+  -- Decision 45: the credit limit uses this turn's boundary net GPT, the figure the offer showed.
+  local gpt = major.netGPT
+  if p.limitTurn == ctx.turn then gpt = p.limitNetGPT end
+  bc.netGPT = gpt
   if bc.liq and ctx.U > 0 and c.tiers[bc.tier] then
-    bc.normalLimit = WBL_MATH.BaseCreditLimit(bc.rating, major.netGPT, ctx.U, c) * bc.liq.limitMultiplier
+    bc.normalLimit = WBL_MATH.BaseCreditLimit(bc.rating, gpt, ctx.U, c, ctx.scale) * bc.liq.limitMultiplier
     bc.extension = WBL_MATH.InvestorCreditExtension(bc.normalLimit, bc.E, ctx.U, c)
   end
   if s.suspended or not bc.liq or not (ctx.U > 0) or not c.tiers[bc.tier] then bc.block = "BANK_SUSPENDED"
@@ -512,6 +532,10 @@ local function restructureBlock(ctx, p, loan)
   if not ctx.config.tiers[p.tier] then return "BANK_SUSPENDED" end
   if loan.scheduledPrincipal + loan.overduePrincipal + loan.overdueInterest + loan.arrearsFees <= 0 then
     return "AMOUNT_INVALID"
+  end
+  -- Decision 55: the full era Favor cost, never "all available Favor if less" (MP game D: 9 of 100).
+  if ctx.U > 0 and available(ctx, ctx.favor, p.playerID) < WBL_MATH.RestructureFavorCost(ctx.U, ctx.scale, ctx.config) then
+    return "INSUFFICIENT_FAVOR"
   end
   return ""
 end
@@ -702,7 +726,8 @@ local function milestoneBlock(ctx, playerID, m, required)
   local fact = milestoneFact(ctx, playerID, m)
   if not fact or fact.valid == false then return "MILESTONE_INVALID" end
   if fact.done then return "MILESTONE_COMPLETE" end
-  return ""
+  -- Decision 54: techs 2-3 research steps away; population + 3 (small city) or + 2.
+  return WBL_MATH.MilestoneDifficulty(m, fact, ctx.config)
 end
 
 local function loanMilestone(m, halfwayTurn)
@@ -733,7 +758,7 @@ local function newLoan(ctx, p, spec)
   local quote = spec.quote
   local loan = {loanID = loanID, playerID = p.playerID, product = spec.product,
     entitlementID = spec.entitlementID or 0, lineageID = spec.lineageID or loanID,
-    parentLoanID = spec.parentLoanID or 0, originTurn = ctx.turn, originTier = p.tier,
+    parentLoanID = spec.parentLoanID or 0, originTurn = ctx.turn, originTier = spec.originTier or p.tier,
     principal = quote.principal, valueRatio = quote.valueRatio, nominalRate = quote.nominalRate,
     growth = quote.growth, earlyRepayInterestFraction = ctx.config.credit.earlyRepayInterestFraction,
     paymentTurns = quote.paymentTurns, graceTurns = quote.graceTurns,
@@ -743,6 +768,8 @@ local function newLoan(ctx, p, spec)
     scheduledPrincipal = quote.principal, futureInterest = math.max(0, quote.totalRepayment - quote.principal),
     overduePrincipal = 0, overdueInterest = 0, arrearsFees = 0,
     missedCount = spec.missedCount or 0, everMissed = spec.everMissed == true,
+    arrearsTurns = spec.arrearsTurns or 0, defaultTurn = spec.defaultTurn or 0, wasLate = false,
+    payoffNotified = false,
     restructured = spec.restructured == true, milestoneUsed = spec.milestoneUsed == true,
     promotionUsed = spec.promotionUsed == true,
     milestone = spec.milestone or noneLoanMilestone(), status = "ACTIVE"}
@@ -912,11 +939,12 @@ function H.RESTRUCTURE(ctx, p, params)
   if block ~= "" then return block end
   local q = restructureQuote(ctx, p, loan)
   if not within(q.valueRatio, quotedV, ctx) then return "PRICE_CHANGED" end
-  local cost = math.min(WBL_MATH.RestructureFavorCost(ctx.U, ctx.scale, c), available(ctx, ctx.favor, p.playerID))
+  local cost = WBL_MATH.RestructureFavorCost(ctx.U, ctx.scale, c) -- restructureBlock checked the Favor (decision 55)
   favorEffect(ctx, p.playerID, -cost, "RESTRUCTURE_FAVOR", {loanID = loan.loanID}, true)
   removeLoanLots(ctx.state, loan.loanID)
   local child = newLoan(ctx, p, {product = loan.product, quote = q, entitlementID = loan.entitlementID,
     lineageID = loan.lineageID, parentLoanID = loan.loanID, missedCount = loan.missedCount,
+    arrearsTurns = loan.arrearsTurns, defaultTurn = loan.defaultTurn, originTier = loan.originTier,
     everMissed = loan.everMissed, restructured = true, milestoneUsed = loan.milestoneUsed,
     promotionUsed = loan.promotionUsed, milestone = loan.milestone})
   loan.milestone = noneLoanMilestone()
@@ -950,7 +978,7 @@ function H.SELECT_MILESTONE(ctx, p, params)
   if loan.originTurn ~= ctx.turn then return "MILESTONE_WINDOW" end
   -- Milestone is chosen at origination and preserved through restructuring; a restructured
   -- lineage that never had one must not gain one (spec 2.5, decision 17).
-  if loan.parentLoanID ~= 0 then return "MILESTONE_WINDOW" end
+  if loan.parentLoanID ~= 0 then return "MILESTONE_RESTRUCTURED" end
   local m = paramMilestone(params)
   local mReason = milestoneBlock(ctx, p.playerID, m, true)
   if mReason ~= "" then return mReason end
@@ -1148,6 +1176,14 @@ local function eliminate(ctx, p)
     if loan.milestone.status == "PENDING" then loan.milestone.status = "CANCELLED" end
     loan.status = "WRITTEN_OFF"
   end
+  -- Decision 61: elimination clears the default record (the loan arrears clocks stay as history; the rating stays).
+  for i = 1, #s.loans do
+    local loan = s.loans[i]
+    if loan.playerID == p.playerID then
+      loan.defaultTurn, loan.wasLate, loan.payoffNotified = 0, false, false
+    end
+  end
+  p.inDefault, p.defaultTurn, p.arrearsTurns = false, 0, 0
   local kept = {}
   for i = 1, #s.lots do
     if s.lots[i].playerID ~= p.playerID then kept[#kept + 1] = s.lots[i] end
@@ -1356,6 +1392,7 @@ local function collectInstallment(ctx, loan, p, cap, purpose, reason)
   local due = principal + interest
   local gold = available(ctx, ctx.gold, loan.playerID)
   if cap ~= nil then gold = math.max(0, math.min(gold, cap)) end
+  if isDust(gold, c) then gold = 0 end -- decision 48: a float leftover is no gold at all
   local paidI, paidP = interest, principal
   local pay = due
   if gold < due then
@@ -1375,7 +1412,7 @@ local function collectInstallment(ctx, loan, p, cap, purpose, reason)
   goldEffect(ctx, loan.playerID, -pay, reason or "INSTALLMENT", ids)
   move(ctx, purpose or "REPAY_SCHEDULED", loan.playerID, pay, ids)
   local unpaidP, unpaidI = principal - paidP, interest - paidI
-  if gold >= due then unpaidP, unpaidI = 0, 0 end
+  if gold >= due or isDust(unpaidP + unpaidI, c) then unpaidP, unpaidI = 0, 0 end
   if unpaidP + unpaidI > 0 then
     local s = ctx.state
     s.lots[#s.lots + 1] = {lotID = nextID(s, "lot"), loanID = loan.loanID, playerID = loan.playerID,
@@ -1387,7 +1424,7 @@ local function collectInstallment(ctx, loan, p, cap, purpose, reason)
     if loan.missedCount % c.credit.missedPaymentsToDowngrade == 0 then
       p.rating = WBL_MATH.DowngradeRating(p.rating, c.arrears.missDowngradeFloor)
     end
-    notify(ctx, "PAYMENT_MISSED", loan.playerID, "", loan.loanID, unpaidP + unpaidI)
+    notifyLoan(ctx, "PAYMENT_MISSED", loan, "", unpaidP + unpaidI)
     return pay, true
   end
   return pay, false
@@ -1430,7 +1467,7 @@ end
 -- any installment part the budget does not cover becomes an arrears lot as usual.
 local function phaseGarnish(ctx)
   local c = ctx.config
-  local stage2Start = WBL_MATH.ArrearsClocks(ctx.scale, c).stage2StartTurn
+  local stage2Start = WBL_MATH.ArrearsClocks(ctx.scale, c, "DEVELOPED").stage2StartTurn -- same index for every tier
   local total, missed = 0, 0
   for i = 1, #ctx.living do
     local pid = ctx.living[i]
@@ -1445,6 +1482,7 @@ local function phaseGarnish(ctx)
       end
       local paid = payArrears(ctx, pid, budget, "GARNISH", "GARNISH")
       local left = math.max(0, budget - paid)
+      if isDust(left, c) then left = 0 end -- decision 48 (MP game C: 30 - 30 left -3.6e-15)
       local loans = activeLoans(ctx.state, pid)
       for j = 1, #loans do
         local loan = loans[j]
@@ -1470,41 +1508,104 @@ local function allDebtSettled(state, playerID)
   return not hasLots(state, playerID)
 end
 
+-- Decision 57 thresholds for one loan: by the tier it was taken at (a lineage keeps its tier).
+local function loanClocks(ctx, loan)
+  local tier = loan.originTier
+  if type(ctx.config.arrears.clockTurns[tier]) ~= "table" then tier = "DEVELOPED" end
+  return WBL_MATH.ArrearsClocks(ctx.scale, ctx.config, tier)
+end
+
+local function loanHasLots(state, loanID)
+  return findBy(state.lots, "loanID", loanID) ~= nil
+end
+
+-- Decision 57: each loan counts its game turns in arrears for its whole life (a restructured
+-- replacement continues the count) and defaults on its own when the count reaches its tier's
+-- threshold. The civ is in default while any loan is; it leaves default only when every arrears lot
+-- is cleared (R5, decision 19), and then every loan's default ends. Civ consequences use the civ's
+-- default turn, which is the longest-defaulted loan's: the worst stage. p.arrearsTurns is the
+-- largest loan count (display and logs only).
 local function phaseDefault(ctx)
   local c, s = ctx.config, ctx.state
-  local clocks = WBL_MATH.ArrearsClocks(ctx.scale, c)
+  local stage2Start = WBL_MATH.ArrearsClocks(ctx.scale, c, "DEVELOPED").stage2StartTurn
   local entered, cleared, restored = 0, 0, 0
   for i = 1, #ctx.living do
     local pid = ctx.living[i]
     local p = playerOf(ctx, pid)
     local arrears = hasLots(s, pid)
-    if arrears then p.arrearsTurns = p.arrearsTurns + 1 else p.arrearsTurns = 0 end
-    if p.inDefault then
-      if not arrears then
-        -- Penalties end and the scar starts when arrears clear; D persists while debt remains.
-        p.inDefault, p.defaultTurn = false, 0
-        p.scarUntilTurn = ctx.turn + WBL_MATH.ScaleTurns(c.credit.scarTurns, ctx.scale)
-        cleared = cleared + 1
-        notify(ctx, "DEFAULT_CLEARED", pid, "")
-      else
-        p.defaultTurn = p.defaultTurn + 1
-        if p.defaultTurn == clocks.stage2StartTurn then
-          notify(ctx, "DEFAULT_STAGE2", pid, "DEFAULT_STAGE2:" .. pid .. ":" .. (ctx.turn - p.defaultTurn + 1))
+    local loans = activeLoans(s, pid)
+    if p.inDefault and not arrears then
+      -- Penalties end and the scar starts when arrears clear; D persists while debt remains.
+      -- Every loan of the civ, closed ones too: a defaulted loan may have been repaid or restructured.
+      local worst
+      for j = 1, #s.loans do
+        local loan = s.loans[j]
+        if loan.playerID == pid then
+          if loan.defaultTurn > 0 and (worst == nil or loan.defaultTurn > worst.defaultTurn) then worst = loan end
+          loan.defaultTurn = 0
         end
       end
-    elseif arrears and p.arrearsTurns >= clocks.defaultTurns then
+      p.inDefault, p.defaultTurn = false, 0
+      p.scarUntilTurn = ctx.turn + WBL_MATH.ScaleTurns(c.credit.scarTurns, ctx.scale)
+      cleared = cleared + 1
+      if worst then
+        notifyLoan(ctx, "DEFAULT_CLEARED", worst, "")
+      else
+        notify(ctx, "DEFAULT_CLEARED", pid, "")
+      end
+    end
+    local maxTurns = 0
+    local newlyDefaulted = false
+    for j = 1, #loans do
+      local loan = loans[j]
+      local clocks = loanClocks(ctx, loan)
+      local late = loanHasLots(s, loan.loanID)
+      if late then loan.arrearsTurns = loan.arrearsTurns + 1 end
+      if loan.arrearsTurns > maxTurns then maxTurns = loan.arrearsTurns end
+      if loan.defaultTurn > 0 then
+        loan.defaultTurn = loan.defaultTurn + 1
+        if loan.defaultTurn == stage2Start then
+          notifyLoan(ctx, "DEFAULT_STAGE2", loan, "DEFAULT_STAGE2:" .. loan.loanID .. ":" .. (ctx.turn - loan.defaultTurn + 1))
+        end
+      elseif late and loan.arrearsTurns >= clocks.defaultTurns then
+        loan.defaultTurn = 1
+        newlyDefaulted = true
+        notifyLoan(ctx, "DEFAULT_STAGE1", loan, "DEFAULT_STAGE1:" .. loan.loanID .. ":" .. ctx.turn)
+      elseif late and loan.arrearsTurns == clocks.warningTurns then
+        notifyLoan(ctx, "ARREARS_WARNING", loan, "ARREARS_WARNING:" .. loan.loanID,
+          clocks.defaultTurns - loan.arrearsTurns)
+      elseif late and not loan.wasLate and loan.arrearsTurns > clocks.warningTurns then
+        -- Leon 2026-11-08: a loan already past its warning count that falls behind again (it had no
+        -- arrears at the previous boundary) gets its own warning, with the turns it has left.
+        notifyLoan(ctx, "ARREARS_WARNING_AGAIN", loan, "ARREARS_WARNING_AGAIN:" .. loan.loanID .. ":" .. ctx.turn,
+          clocks.defaultTurns - loan.arrearsTurns)
+      end
+      loan.wasLate = late
+    end
+    p.arrearsTurns = maxTurns
+    if p.inDefault then
+      p.defaultTurn = p.defaultTurn + 1
+    elseif newlyDefaulted then
       p.inDefault, p.defaultTurn, p.rating = true, 1, "D"
       entered = entered + 1
-      local loans = activeLoans(s, pid)
       for j = 1, #loans do
         if loans[j].milestone.status == "PENDING" then
           loans[j].milestone.status = "CANCELLED"
           loans[j].milestoneUsed = true
         end
       end
-      notify(ctx, "DEFAULT_STAGE1", pid, "DEFAULT_STAGE1:" .. pid .. ":" .. ctx.turn)
-    elseif arrears and p.arrearsTurns == clocks.warningTurns then
-      notify(ctx, "ARREARS_WARNING", pid, "ARREARS_WARNING:" .. pid .. ":" .. (ctx.turn - p.arrearsTurns + 1), p.arrearsTurns)
+    end
+    -- Decision 53: tell a player in arrears or default once when its treasury covers a loan's full
+    -- Repay early amount (which clears that loan's arrears), and again only after that stopped being true.
+    for j = 1, #loans do
+      local loan = loans[j]
+      local can = false
+      if loanHasLots(s, loan.loanID) then
+        local due = WBL_MATH.EarlySettlementQuote(loan).totalDue
+        can = due > 0 and available(ctx, ctx.gold, pid) >= due
+        if can and not loan.payoffNotified then notifyLoan(ctx, "PAYOFF_AVAILABLE", loan, "", due) end
+      end
+      loan.payoffNotified = can
     end
     -- Decision 19: D returns to C only once every loan's arrears and all bank debt are settled.
     if p.rating == "D" and not p.inDefault and allDebtSettled(s, pid) then
@@ -1512,7 +1613,7 @@ local function phaseDefault(ctx)
       restored = restored + 1
     end
     local stage = 0
-    if p.inDefault then stage = stageFor(p.defaultTurn, clocks.stage2StartTurn) end
+    if p.inDefault then stage = stageFor(p.defaultTurn, stage2Start) end
     if p.relief.status == "PENDING" then stage = 0 end
     local tier = ""
     if stage > 0 then tier = p.tier end
@@ -1520,6 +1621,10 @@ local function phaseDefault(ctx)
       p.penaltyLevel = {tier = tier, stage = stage}
       pushEffect(ctx, {kind = "PENALTY_LEVEL", playerID = pid, tier = tier, stage = stage, reason = "DEFAULT_STAGE"})
     end
+  end
+  -- MP game F: the pay-off flag belongs to active loans only; clear it once a loan leaves ACTIVE.
+  for i = 1, #s.loans do
+    if s.loans[i].status ~= "ACTIVE" then s.loans[i].payoffNotified = false end
   end
   logPhase(ctx, {phase = "default", entered = entered, cleared = cleared, restoredC = restored})
 end
@@ -1563,7 +1668,7 @@ local function phaseMilestones(ctx)
           local lot = findBy(s.lots, "lotID", r.lots[j].lotID)
           lot.principal, lot.interest, lot.fees = r.lots[j].principal, r.lots[j].interest, r.lots[j].fees
         end
-        purgeLots(s)
+        purgeLots(s, c)
         syncLoans(s, p.playerID)
         p.relief.status = "DONE"
         addSubsidy(ctx, p.playerID, "RELIEF", r.forgivenExposure)
@@ -1691,12 +1796,26 @@ local function phasePerks(ctx)
   logPhase(ctx, {phase = "perks", favor = favorPaid, aid = aidPaid, lentPreviousTurn = totalLent})
 end
 
+-- Gold per game turn due on the player's active loans: each loan's next installment, the same
+-- split collectInstallment uses (decision 51 counts these against half of net GPT).
+local function scheduledPayment(state, pid)
+  local total = 0
+  local loans = activeLoans(state, pid)
+  for i = 1, #loans do
+    local loan = loans[i]
+    local k = loan.installments - loan.installmentsPaid
+    if k > 0 then total = total + (loan.scheduledPrincipal + loan.futureInterest) / k end
+  end
+  return total
+end
+
 local function aiFacts(ctx, pid, offer)
   local s = ctx.state
   local p = playerOf(ctx, pid)
   return {playerID = pid, isHuman = false, gold = available(ctx, ctx.gold, pid), netGPT = ctx.majors[pid].netGPT,
     activeLoans = #activeLoans(s, pid), arrears = sumLots(playerLots(s, pid)), rating = p.rating,
-    frozen = isFrozen(s, pid), inDefault = p.inDefault, tier = p.tier, liquidityTier = offer.liquidityTier}
+    frozen = isFrozen(s, pid), inDefault = p.inDefault, tier = p.tier, liquidityTier = offer.liquidityTier,
+    scale = ctx.scale, unit = ctx.U, scheduledPayment = scheduledPayment(s, pid)}
 end
 
 local function phaseAI(ctx)
@@ -1781,6 +1900,11 @@ local function turnBody(state, snapshot, config)
   local ctx = newContext(s, snapshot, config)
   s.speedScale = ctx.scale
   ensurePlayers(ctx)
+  -- Decision 45: requests this turn price the credit limit on this boundary's net GPT.
+  for i = 1, #ctx.living do
+    local p = playerOf(ctx, ctx.living[i])
+    if p then p.limitNetGPT, p.limitTurn = ctx.majors[p.playerID].netGPT, ctx.turn end
+  end
   phaseGrowth(ctx)
   phaseReserve(ctx)
   phaseTiers(ctx)
@@ -1846,8 +1970,19 @@ local function requestBody(state, snapshot, playerID, params, config)
     local p = findBy(s.players, "playerID", playerID)
     p.nonce = p.nonce + 1
     p.lastResult = {nonce = params.nonce, kind = kind, ok = false, reason = reason}
-    local offer = findBy(s.offers, "playerID", playerID)
-    if offer then offer.nonce = p.nonce end
+    -- Decision 45: republish the refused player's offer from the fresh snapshot (limits stay on the
+    -- boundary GPT), so the panel never keeps showing a maximum the bank just refused.
+    local index
+    for i = 1, #s.offers do
+      if s.offers[i].playerID == playerID then index = i end
+    end
+    if complete and index then
+      local nextEvent = s.nextIDs.event -- a refusal consumes no event ID
+      local built, fresh = pcall(function() return buildOffer(newContext(s, snapshot, config), playerID) end)
+      s.nextIDs.event = nextEvent
+      if built and type(fresh) == "table" then s.offers[index] = fresh end
+    end
+    if index then s.offers[index].nonce = p.nonce end
     return s, {}, {ok = false, reason = reason, kind = kind, detail = ""}
   end
   if not complete then return rejected("SNAPSHOT_INCOMPLETE") end

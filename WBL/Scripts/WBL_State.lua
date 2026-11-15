@@ -1,4 +1,5 @@
--- WBL_STATE: pure persisted-state module (schema 1, PLAN.md "State schema 1").
+-- WBL_STATE: pure persisted-state module (schema 2: PLAN.md "State schema 1" plus the per-loan arrears
+-- clock of decision 57 and the boundary credit-limit GPT of decision 45; MIGRATIONS[1] upgrades schema 1).
 -- Load WBL_Config.lua first. No engine calls, no pairs, no randomness; every
 -- traversal uses next + sorted keys so results never depend on insertion order.
 --
@@ -27,10 +28,51 @@
 --       Closed loans/lots/deposits are kept: lineage and history flags still need them.
 --   Checksum(state, config) -> string "<length>:<h1>:<h2>" over CanonicalString
 --   CanonicalString(state) -> exact deterministic text (sorted keys, %.17g numbers)
---   MIGRATIONS[n] = function(stateAtSchemaN) -> stateAtSchemaN+1 (none needed yet)
+--   MIGRATIONS[n] = function(stateAtSchemaN) -> stateAtSchemaN+1 (MIGRATIONS[1]: schema 1 -> 2)
 WBL_STATE = {}
 local S = WBL_STATE
 S.MIGRATIONS = {}
+
+-- Schema 1 -> 2 (decisions 45 and 57). The old clock was per player and consecutive: carry it onto
+-- each active loan that has arrears lots, and the player's default count onto those loans if the
+-- player is in default (at least one loan then stays in default until every arrears lot clears).
+-- Loans without lots start at 0. Every loan starts with payoffNotified = false; every player with
+-- no boundary GPT yet (limitTurn 0).
+S.MIGRATIONS[1] = function(state)
+  local inArrears = {}
+  for _, lot in ipairs(state.lots or {}) do inArrears[lot.loanID] = true end
+  local players = {}
+  for _, p in ipairs(state.players or {}) do
+    players[p.playerID] = p
+    p.limitNetGPT, p.limitTurn = 0, 0
+  end
+  local defaulted = {}
+  for _, loan in ipairs(state.loans or {}) do
+    local p = players[loan.playerID]
+    loan.arrearsTurns, loan.defaultTurn, loan.payoffNotified = 0, 0, false
+    loan.wasLate = loan.status == "ACTIVE" and inArrears[loan.loanID] == true
+    if loan.status == "ACTIVE" and inArrears[loan.loanID] and p then
+      loan.arrearsTurns = p.arrearsTurns or 0
+      if p.inDefault then
+        loan.defaultTurn = math.max(1, p.defaultTurn or 1)
+        defaulted[p.playerID] = true
+      end
+    end
+  end
+  -- A player in default whose arrears sit on no active loan keeps its default on the oldest active loan.
+  for _, p in ipairs(state.players or {}) do
+    if p.inDefault and not defaulted[p.playerID] then
+      for _, loan in ipairs(state.loans or {}) do
+        if loan.playerID == p.playerID and loan.status == "ACTIVE" then
+          loan.defaultTurn = math.max(1, p.defaultTurn or 1)
+          break
+        end
+      end
+    end
+  end
+  state.schema = 2
+  return state
+end
 
 local STRING_PREFIX = "WBLS:"
 
@@ -116,6 +158,9 @@ local PLAYER = rec({
   lastResult = rec({ nonce = INT, kind = STR, ok = BOOL, reason = STR }),
   tier = STR, pendingTier = STR, pendingCount = INT, rating = STR, arrearsTurns = INT,
   inDefault = BOOL, defaultTurn = INT, scarUntilTurn = INT,
+  -- Schema 2 (decision 45): net GPT from the boundary snapshot of game turn limitTurn; requests in
+  -- that turn use it for the credit limit. limitTurn 0 = not measured yet (use the fresh snapshot).
+  limitNetGPT = NUM, limitTurn = INT,
   penaltyLevel = rec({ tier = SCALAR, stage = INT }),
   debtReliefUsed = BOOL,
   relief = rec({ status = enum("NONE", "PENDING", "DONE", "FAILED"), milestone = MILESTONE_REQUEST, deadlineTurn = INT }),
@@ -135,6 +180,10 @@ local LOAN = rec({
   scheduledPrincipal = NUM, futureInterest = NUM,
   overduePrincipal = NUM, overdueInterest = NUM, arrearsFees = NUM,
   missedCount = INT, everMissed = BOOL,
+  -- Schema 2 (decision 57): game turns this loan (and its restructured lineage) spent in arrears,
+  -- never reset; turns in default (0 = not in default); whether it had arrears at the previous boundary
+  -- (for the repeat warning); and the "you can pay this off" flag (decision 53).
+  arrearsTurns = INT, defaultTurn = INT, wasLate = BOOL, payoffNotified = BOOL,
   restructured = BOOL, milestoneUsed = BOOL, promotionUsed = BOOL,
   milestone = LOAN_MILESTONE,
   status = enum("ACTIVE", "MATURED", "REPAID_EARLY", "RESTRUCTURED", "WRITTEN_OFF"),
@@ -276,6 +325,7 @@ function S.NewPlayer(playerID)
     lastResult = { nonce = 0, kind = "", ok = false, reason = "" },
     tier = "", pendingTier = "", pendingCount = 0, rating = "",
     arrearsTurns = 0, inDefault = false, defaultTurn = 0, scarUntilTurn = 0,
+    limitNetGPT = 0, limitTurn = 0,
     penaltyLevel = { tier = "", stage = 0 },
     debtReliefUsed = false,
     relief = { status = "NONE", milestone = { kind = "NONE", target = "", cityID = 0 }, deadlineTurn = 0 },

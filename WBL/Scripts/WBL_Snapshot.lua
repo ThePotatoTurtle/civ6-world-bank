@@ -7,6 +7,7 @@
 --
 -- API
 --   Build(state, config, options) -> snapshot
+--     options.turn: an earlier game turn to label the snapshot with (decision 41 fallback; never later than now).
 --     options.extraMilestones: ordered {playerID, kind, target, cityID} also to be read
 --     (request validation). state may be nil (first boundary: no milestone targets).
 --   MilestoneKey(milestone) -> "KIND:target:cityID", the milestoneFacts key.
@@ -87,6 +88,37 @@ local function MilestoneTargets(state, options)
   return targets
 end
 
+-- Prerequisite map from GameInfo.TechnologyPrereqs (Technologies.xml:153 table), built once per load:
+-- the database is fixed during a game. Rows keep database order, so the walk is deterministic.
+local techPrereqs = nil
+local function TechPrereqs()
+  if techPrereqs == nil then
+    local map = {}
+    for row in GameInfo.TechnologyPrereqs() do
+      local list = map[row.Technology]
+      if list == nil then list = {}; map[row.Technology] = list end
+      list[#list + 1] = row.PrereqTech
+    end
+    techPrereqs = map
+  end
+  return techPrereqs
+end
+
+-- Decision 54: research steps to a tech target, best effort. A failed read leaves it nil (the reducer
+-- then refuses a new selection as invalid) and never fails the snapshot.
+local function TechSteps(player, techType, config)
+  local ok, steps = pcall(function()
+    local playerTechs = player:GetTechs()
+    local function researched(tech)
+      local row = GameInfo.Technologies[tech]
+      return row ~= nil and playerTechs:HasTech(row.Index)
+    end
+    return WBL_MATH.TechSteps(techType, TechPrereqs(), researched, config.milestones.techMaxSteps + 1)
+  end)
+  if ok and Finite(steps) then return steps end
+  return nil
+end
+
 local function MilestoneFact(player, cities, target, config)
   local fact = { key = target.key, kind = target.kind, done = false, valid = true }
   local function FindCity()
@@ -102,6 +134,7 @@ local function MilestoneFact(player, cities, target, config)
     local population, err = Read(function() return city:GetPopulation() end)
     if not Finite(population) then return fact, err or "nonfinite_population" end
     fact.done = population >= target.target
+    fact.population = population
   elseif target.kind == "TECH" then
     local row = GameInfo.Technologies[target.target] -- Keyed lookup; AustraliaScenario.lua:771 iterates the same table.
     if row == nil then fact.valid = false; return fact, nil end
@@ -111,6 +144,7 @@ local function MilestoneFact(player, cities, target, config)
     end)
     if type(has) ~= "boolean" then return fact, err or "missing_tech_read" end
     fact.done = has
+    fact.techSteps = TechSteps(player, target.target, config)
   elseif target.kind == "DISTRICT" then
     if not config.features.districtMilestoneVerified then return nil, nil end -- S6 gate: row omitted.
     local row = GameInfo.Districts[target.target]
@@ -291,6 +325,9 @@ function S.Build(state, config, options)
     snapshot.incomplete[#snapshot.incomplete + 1] = reason
   end
   local turn, turnError = Read(function() return Game.GetCurrentGameTurn() end)
+  -- Decision 41 fallback: a turn whose job never ran is processed under its own turn number at the next round
+  -- start (options.turn), so every game turn is processed exactly once.
+  if options and Finite(options.turn) and Finite(turn) and options.turn < turn then turn = options.turn end
   if Finite(turn) then snapshot.turn = turn else fail("turn:" .. Text(turnError or "invalid")) end
   local speed, speedError = Read(function() return GameInfo.GameSpeeds[GameConfiguration.GetGameSpeedType()] end)
   if type(speed) == "table" and Finite(speed.CostMultiplier) and speed.CostMultiplier > 0 then

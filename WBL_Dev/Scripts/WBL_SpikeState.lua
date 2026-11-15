@@ -197,8 +197,8 @@ local function ProductionState(turn, config)
     growth = 0.01, earlyRepayInterestFraction = 0.5, paymentTurns = 30, graceTurns = 3, preferredStep = 0,
     liquidityExempt = false, installments = 30, installmentsPaid = 0, nextDueTurn = turn + 4,
     scheduledPrincipal = 1000.1, futureInterest = 333.33333333333337, overduePrincipal = 0, overdueInterest = 0,
-    arrearsFees = 0, missedCount = 0, everMissed = false, restructured = false, milestoneUsed = false,
-    promotionUsed = false,
+    arrearsFees = 0, missedCount = 0, everMissed = false, arrearsTurns = 0, defaultTurn = 0, wasLate = false, payoffNotified = false,
+    restructured = false, milestoneUsed = false, promotionUsed = false,
     milestone = { kind = "NONE", target = "", cityID = 0, halfwayTurn = 0, status = "NONE", fraction = 0 },
     status = "ACTIVE",
   }

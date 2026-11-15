@@ -2,6 +2,76 @@
 <!-- Player-facing text for the World Bank panel. Placeholders use {n_name}. -->
 <GameData>
   <LocalizedText>
+    <!-- Stage 5 redesign (Leon approved the mock-up, 2026-11-08). -->
+    <Row Tag="LOC_WBL_UI_INCOME" Language="en_US"><Text>{1_gpt} [ICON_Gold] per turn</Text></Row>
+    <Row Tag="LOC_WBL_UI_INCOME_SUB" Language="en_US"><Text>after {1_due} in loan payments</Text></Row>
+    <Row Tag="LOC_WBL_UI_INCOME_NONE" Language="en_US"><Text>no loan payments due</Text></Row>
+    <Row Tag="LOC_WBL_UI_INCOME_TT" Language="en_US"><Text>Your gold per turn is {1_gross}. Loan payments due next turn: {2_due}. While every loan is paying: {3_per} per turn. The top bar can't show these payments.</Text></Row>
+    <Row Tag="LOC_WBL_UI_CREDIT_LINE" Language="en_US"><Text>You can borrow {1_draw} gold</Text></Row>
+    <Row Tag="LOC_WBL_UI_CREDIT_TT" Language="en_US"><Text>Limit {1_limit} at rating {2_rating}, based on your gold per turn and the game speed. Already borrowed: {3_out}.[NEWLINE]Bank funds: {4_pool} of {5_cap} ({6_liq}).[NEWLINE]World growth: {7_growth}% per turn. Payments are set in today's gold.</Text></Row>
+    <Row Tag="LOC_WBL_UI_RATING_PILL" Language="en_US"><Text>Rating {1_rating}</Text></Row>
+    <Row Tag="LOC_WBL_UI_UP_TO" Language="en_US"><Text>up to {1_max} gold</Text></Row>
+    <Row Tag="LOC_WBL_UI_SEL_AMOUNT" Language="en_US"><Text>Amount</Text></Row>
+    <Row Tag="LOC_WBL_UI_SEL_TERM" Language="en_US"><Text>Term</Text></Row>
+    <Row Tag="LOC_WBL_UI_SEL_MILESTONE" Language="en_US"><Text>Milestone (forgives {1_pct}%)</Text></Row>
+    <Row Tag="LOC_WBL_UI_SEL_MILESTONE_REQ" Language="en_US"><Text>Milestone, required (forgives {1_pct}%)</Text></Row>
+    <Row Tag="LOC_WBL_UI_GOLD_VALUE" Language="en_US"><Text>{1_amount} gold</Text></Row>
+    <Row Tag="LOC_WBL_UI_TURNS_VALUE" Language="en_US"><Text>{1_turns} turns</Text></Row>
+    <Row Tag="LOC_WBL_UI_SELECTOR_BTN" Language="en_US"><Text>{1_value}</Text></Row>
+    <Row Tag="LOC_WBL_UI_TERM_TT" Language="en_US"><Text>A {1_std}-turn term at Standard speed, shown in this game's turns.</Text></Row>
+    <Row Tag="LOC_WBL_UI_MILESTONE_TT" Language="en_US"><Text>Finish the milestone before the loan's halfway point and part of what's left is forgiven. Only milestones that fit the term are listed.</Text></Row>
+    <Row Tag="LOC_WBL_UI_PREVIEW_1" Language="en_US"><Text>{1_n} payments of {2_pay} gold, {3_first}.</Text></Row>
+    <Row Tag="LOC_WBL_UI_FIRST_NEXT" Language="en_US"><Text>first payment next turn</Text></Row>
+    <Row Tag="LOC_WBL_UI_FIRST_IN" Language="en_US"><Text>first payment in {1_turns} turns</Text></Row>
+    <Row Tag="LOC_WBL_UI_PREVIEW_2" Language="en_US"><Text>You repay {1_total} ({2_borrowed} borrowed + {3_interest} interest, {4_pct}%).</Text></Row>
+    <Row Tag="LOC_WBL_UI_PREVIEW_TT" Language="en_US"><Text>Price: you repay {1_v} gold per gold borrowed, in today's gold. Interest over the whole loan: {2_rate}%.</Text></Row>
+    <Row Tag="LOC_WBL_UI_PREVIEW_MS" Language="en_US"><Text>Finish {1_name} by turn {2_turn} to have {3_pct}% of what's left forgiven.</Text></Row>
+    <Row Tag="LOC_WBL_UI_HINT" Language="en_US"><Text>Hover a mark like this for more details.</Text></Row>
+    <Row Tag="LOC_WBL_UI_HINT_TT" Language="en_US"><Text>Titles and lines with this mark show more when you hover over them.</Text></Row>
+    <Row Tag="LOC_WBL_UI_PILL_ON_TIME" Language="en_US"><Text>On time</Text></Row>
+    <Row Tag="LOC_WBL_UI_PILL_ARREARS" Language="en_US"><Text>In arrears · {1_left} turns left</Text></Row>
+    <Row Tag="LOC_WBL_UI_PILL_DEFAULT" Language="en_US"><Text>In default</Text></Row>
+    <Row Tag="LOC_WBL_UI_PILL_DEFAULT_STAGE2" Language="en_US"><Text>Default, stage 2</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_TITLE" Language="en_US"><Text>{1_product} #{2_id}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_SUB" Language="en_US"><Text>Borrowed {1_principal} gold on turn {2_turn}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_TT" Language="en_US"><Text>Overdue {1_total}: principal {2_p}, interest {3_i}, fees {4_f}. Missed payments: {5_missed}.[NEWLINE]Turns in arrears: {6_used} of {7_limit} before default. Every turn behind counts, even after you catch up.[NEWLINE]Why so much interest? Payments grow with the world economy. In today's gold you repay about {8_pct}% more than you borrowed.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_OWE" Language="en_US"><Text>You owe {1_owe} ({2_borrowed} borrowed + {3_interest} interest).</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_PAYMENTS" Language="en_US"><Text>{1_n} payments of {2_pay}, next on turn {3_turn}.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_OVERDUE" Language="en_US"><Text>Overdue: {1_amount} gold, paid first.</Text></Row>
+    <Row Tag="LOC_WBL_UI_PAY_NOW" Language="en_US"><Text>Pay {1_pay} now and save {2_save}</Text></Row>
+    <Row Tag="LOC_WBL_UI_RESTRUCTURE_BTN2" Language="en_US"><Text>Restructure ({1_favor} Favor)</Text></Row>
+    <Row Tag="LOC_WBL_UI_REFUSED" Language="en_US"><Text>Turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_PENALTIES_LINE" Language="en_US"><Text>{1_count} default penalties in force.</Text></Row>
+    <Row Tag="LOC_WBL_UI_RELIEF_TIER_LINE" Language="en_US"><Text>Debt relief is for Underdeveloped civs only.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWNERS_HEADER" Language="en_US"><Text>Who owns the bank</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWNERS_NONE" Language="en_US"><Text>No one has invested yet.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWNER_LINE" Language="en_US"><Text>{1_name} {2_pct}%</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWNER_PRESIDENT" Language="en_US"><Text>(President)</Text></Row>
+    <Row Tag="LOC_WBL_UI_UNKNOWN_CIV" Language="en_US"><Text>Unknown civ</Text></Row>
+    <Row Tag="LOC_WBL_UI_BENEFITS_HEADER" Language="en_US"><Text>What investing gives you</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_FAVOR" Language="en_US"><Text>+{1_favor} Favor per turn</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_HAVE" Language="en_US"><Text>You have this</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_NEXT" Language="en_US"><Text>Starts at {1_gold} gold</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_NONE" Language="en_US"><Text>Not available</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_DISCOUNT" Language="en_US"><Text>Cheaper loans</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_FULL" Language="en_US"><Text>Full discount</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_HALF_NOW" Language="en_US"><Text>Half now; full at {1_gold} gold</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_HALF_AT" Language="en_US"><Text>Half discount at {1_gold} gold</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_PRESIDENT_YOU" Language="en_US"><Text>You are President</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_PRESIDENT_NEED" Language="en_US"><Text>Needs a {1_pct}% share</Text></Row>
+    <Row Tag="LOC_WBL_UI_DEPOSIT_TT" Language="en_US"><Text>Deposits earn a return and count toward investor rewards. Amount shortcuts are multiples of one U ({1_u} gold).</Text></Row>
+    <Row Tag="LOC_WBL_UI_DEPOSIT_PAYS" Language="en_US"><Text>Pays back {1_pay} on turn {2_turn} (+{3_ret} gold return).</Text></Row>
+    <Row Tag="LOC_WBL_UI_DEPOSIT_BTN2" Language="en_US"><Text>Deposit {1_amount}</Text></Row>
+    <Row Tag="LOC_WBL_UI_DEPOSIT_ROW2" Language="en_US"><Text>Deposit #{1_id}: {2_principal} gold, matures turn {3_turn}, +{4_accrued} so far.</Text></Row>
+    <Row Tag="LOC_WBL_UI_WITHDRAW_BTN2" Language="en_US"><Text>Withdraw {1_payout} now</Text></Row>
+    <Row Tag="LOC_WBL_UI_FREEZE_SHORT" Language="en_US"><Text>Stop new loans to a civ you're at war with.</Text></Row>
+    <Row Tag="LOC_WBL_UI_FREEZE_BTN2" Language="en_US"><Text>Freeze {1_civ}</Text></Row>
+    <Row Tag="LOC_WBL_UI_WARN_TITLE" Language="en_US"><Text>Take this loan?</Text></Row>
+    <Row Tag="LOC_WBL_UI_WARN_TEXT" Language="en_US"><Text>Your loan payments would be {1_total} gold per turn, more than your income of {2_income}. You'd lose about {3_loss} gold per turn until a loan is paid off.</Text></Row>
+    <Row Tag="LOC_WBL_UI_WARN_LINES" Language="en_US"><Text>Payments now: {1_now} per turn[NEWLINE]This loan: +{2_new} per turn[NEWLINE]Income after payments: {3_after} per turn</Text></Row>
+    <Row Tag="LOC_WBL_UI_WARN_NOTE" Language="en_US"><Text>If you can't pay, the loan falls into arrears and can go into default.</Text></Row>
+    <Row Tag="LOC_WBL_UI_WARN_CANCEL" Language="en_US"><Text>Cancel</Text></Row>
+    <Row Tag="LOC_WBL_UI_WARN_OK" Language="en_US"><Text>Borrow anyway</Text></Row>
     <Row Tag="LOC_WBL_UI_TITLE" Language="en_US"><Text>World Bank Loans</Text></Row>
     <Row Tag="LOC_WBL_UI_LAUNCH_LABEL" Language="en_US"><Text>[ICON_GoldLarge]</Text></Row>
     <Row Tag="LOC_WBL_UI_BUTTON_OPEN" Language="en_US"><Text>World Bank</Text></Row>
@@ -32,7 +102,7 @@
     <Row Tag="LOC_WBL_UI_PRODUCT_ORDINARY" Language="en_US"><Text>Loan</Text></Row>
     <Row Tag="LOC_WBL_UI_PRODUCT_INFRASTRUCTURE" Language="en_US"><Text>Infrastructure loan</Text></Row>
     <Row Tag="LOC_WBL_UI_PRODUCT_RECOVERY" Language="en_US"><Text>Disaster recovery loan</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_SUMMARY" Language="en_US"><Text>Tier: {1_tier}. Rating: {2_rating}. You can borrow {4_draw} of your {3_limit} gold limit. Global growth: {5_growth} per turn.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_SUMMARY" Language="en_US"><Text>Tier: {1_tier}. Rating: {2_rating}. You can borrow {4_draw} of your {3_limit} gold limit. Global growth: {5_growth}% per turn.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_LIQUIDITY" Language="en_US"><Text>Bank funds: {1_pool} of {2_cap} gold ({3_tier}).</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_SCAR" Language="en_US"><Text>Credit scar is active, so new loans cost a bit more.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_PRICE_NOTE" Language="en_US"><Text>Rate shown is for the full amount. Smaller loans can cost less.</Text></Row>
@@ -45,14 +115,16 @@
     <Row Tag="LOC_WBL_UI_BORROW_AMOUNT_BTN" Language="en_US"><Text>{1_amount} gold</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_TERM" Language="en_US"><Text>Term</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_TERM_BTN" Language="en_US"><Text>{1_turns} turns</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_MILESTONE_REQ" Language="en_US"><Text>A milestone is required. Finish it before the halfway point and {1_pct} of what's left is forgiven.</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_MILESTONE_OPT" Language="en_US"><Text>Optional milestone. Finish it before the halfway point and {1_pct} of what's left is forgiven.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_MILESTONE_REQ" Language="en_US"><Text>A milestone is required. Finish it before the halfway point and {1_pct}% of what's left is forgiven.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_MILESTONE_OPT" Language="en_US"><Text>Optional milestone. Finish it before the halfway point and {1_pct}% of what's left is forgiven.</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_MILESTONE_BTN" Language="en_US"><Text>Milestone: {1_name}</Text></Row>
-    <Row Tag="LOC_WBL_UI_BORROW_PREVIEW" Language="en_US"><Text>{1_n} payments of {2_pay} gold, starting after {3_grace} grace turns. Total repaid: {4_total} gold (cost {5_cost}, rate {6_rate}).</Text></Row>
+    <Row Tag="LOC_WBL_UI_BORROW_PREVIEW" Language="en_US"><Text>{1_n} payments of {2_pay} gold, starting after {3_grace} grace turns. Total repaid: {4_total} gold (cost {5_cost}, rate {6_rate}%).</Text></Row>
     <Row Tag="LOC_WBL_UI_BORROW_TAKE_BTN" Language="en_US"><Text>Borrow {1_amount} gold</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_NAME_NONE" Language="en_US"><Text>None</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_NAME_POPULATION" Language="en_US"><Text>{1_city} grows to {2_pop}</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_NAME_TECH" Language="en_US"><Text>Research {1_tech}</Text></Row>
+    <Row Tag="LOC_WBL_UI_MS_ESTIMATE" Language="en_US"><Text>(about {1_turns} turns)</Text></Row>
+    <Row Tag="LOC_WBL_UI_MS_NONE_FITS" Language="en_US"><Text>No milestone can be finished in the {1_turns} turns this term allows. Pick a longer term to get one.</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_NONE" Language="en_US"><Text>none</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_PENDING" Language="en_US"><Text>in progress</Text></Row>
     <Row Tag="LOC_WBL_UI_MS_DONE" Language="en_US"><Text>completed</Text></Row>
@@ -65,7 +137,7 @@
     <Row Tag="LOC_WBL_UI_GRANT_BTN" Language="en_US"><Text>Request grant</Text></Row>
     <Row Tag="LOC_WBL_UI_LOANS_NONE" Language="en_US"><Text>You have no active loans.</Text></Row>
     <Row Tag="LOC_WBL_UI_LOANS_DEFAULT" Language="en_US"><Text>You are in default (default turn {1_turn}), penalty stage {2_stage}.</Text></Row>
-    <Row Tag="LOC_WBL_UI_LOANS_WARNING" Language="en_US"><Text>Warning: {1_turns} turns of arrears in a row. Default starts at {2_limit}.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOANS_WARNING" Language="en_US"><Text>Warning: loan #{1_id} goes into default after {2_left} more turns in arrears.</Text></Row>
     <Row Tag="LOC_WBL_UI_LOANS_ARREARS" Language="en_US"><Text>You have arrears, so new loans are blocked.</Text></Row>
     <Row Tag="LOC_WBL_UI_PENALTIES_HEADER" Language="en_US"><Text>Active penalties</Text></Row>
     <Row Tag="LOC_WBL_UI_PENALTY_SUSPENDED" Language="en_US"><Text> (paused while debt relief is pending)</Text></Row>
@@ -76,7 +148,11 @@
     <Row Tag="LOC_WBL_UI_PENALTY_LOYALTY" Language="en_US"><Text>Loyalty {1_value} per city per turn</Text></Row>
     <Row Tag="LOC_WBL_UI_PENALTY_FAVOR" Language="en_US"><Text>Diplomatic Favor {1_value} per turn</Text></Row>
     <Row Tag="LOC_WBL_UI_PENALTY_TRADEPERCENT" Language="en_US"><Text>Own international trade route yields {1_value}%</Text></Row>
-    <Row Tag="LOC_WBL_UI_LOAN_HEADER" Language="en_US"><Text>{1_product} #{2_id}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_HEADER" Language="en_US"><Text>{1_product} #{2_id} ({3_principal} gold, {4_turns} turns)</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_STAGE_ON_TIME" Language="en_US"><Text>On time.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_STAGE_ARREARS" Language="en_US"><Text>In arrears: default after {1_left} more turns behind ({2_used} so far).</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_STAGE_DEFAULT" Language="en_US"><Text>In default.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_STAGE_DEFAULT_STAGE2" Language="en_US"><Text>In default, stage 2.</Text></Row>
     <Row Tag="LOC_WBL_UI_LOAN_RECOVERY" Language="en_US"><Text>Recovery loan for: {1_disaster}</Text></Row>
     <Row Tag="LOC_WBL_UI_LOAN_BALANCE" Language="en_US"><Text>Balance {1_principal} gold. Total owed {2_total}, including {3_future} of future interest.</Text></Row>
     <Row Tag="LOC_WBL_UI_LOANS_DUE_TOTAL" Language="en_US"><Text>Loan payments due: {1_amount} [ICON_Gold] in total, taken at the start of the turn each falls due.</Text></Row>
@@ -91,19 +167,19 @@
     <Row Tag="LOC_WBL_UI_SELECT_MILESTONE_INFO" Language="en_US"><Text>Pick a milestone for this loan. You can only do it on the turn you took the loan.</Text></Row>
     <Row Tag="LOC_WBL_UI_SELECT_MILESTONE_BTN" Language="en_US"><Text>Set milestone</Text></Row>
     <Row Tag="LOC_WBL_UI_RELIEF_HEADER" Language="en_US"><Text>Debt relief</Text></Row>
-    <Row Tag="LOC_WBL_UI_RELIEF_INFO" Language="en_US"><Text>Underdeveloped civs in arrears can pick a milestone and finish it in time to have {1_pct} of their debt forgiven (about {2_amount} gold). Once per game.</Text></Row>
+    <Row Tag="LOC_WBL_UI_RELIEF_INFO" Language="en_US"><Text>Underdeveloped civs in arrears can pick a milestone and finish it in time to have {1_pct}% of their debt forgiven (about {2_amount} gold). Once per game.</Text></Row>
     <Row Tag="LOC_WBL_UI_RELIEF_PENDING_INFO" Language="en_US"><Text>Debt relief is pending: {1_turns} turns left (deadline turn {2_turn}).</Text></Row>
     <Row Tag="LOC_WBL_UI_RELIEF_BTN" Language="en_US"><Text>Apply for debt relief</Text></Row>
     <Row Tag="LOC_WBL_UI_RELIEF_NONE" Language="en_US"><Text>not used</Text></Row>
     <Row Tag="LOC_WBL_UI_RELIEF_PENDING" Language="en_US"><Text>pending</Text></Row>
     <Row Tag="LOC_WBL_UI_RELIEF_DONE" Language="en_US"><Text>granted</Text></Row>
     <Row Tag="LOC_WBL_UI_RELIEF_FAILED" Language="en_US"><Text>failed</Text></Row>
-    <Row Tag="LOC_WBL_UI_INVEST_SUMMARY" Language="en_US"><Text>Eligible capital {1_e} gold (one U is {2_u} gold). Eligible share {3_share}.</Text></Row>
-    <Row Tag="LOC_WBL_UI_INVEST_NOT_INVESTOR" Language="en_US"><Text>You aren't an investor yet. You need {1_need} gold of eligible capital for any reward.</Text></Row>
+    <Row Tag="LOC_WBL_UI_INVEST_SUMMARY" Language="en_US"><Text>Your net deposit that counts: {1_e} gold (one U is {2_u} gold). Your share: {3_share}%.</Text></Row>
+    <Row Tag="LOC_WBL_UI_INVEST_NOT_INVESTOR" Language="en_US"><Text>You aren't an investor yet. Any reward needs a net deposit of {1_need} gold (your deposits minus what you owe the bank).</Text></Row>
     <Row Tag="LOC_WBL_UI_DEPOSITS_HEADER" Language="en_US"><Text>Your deposits</Text></Row>
     <Row Tag="LOC_WBL_UI_DEPOSITS_NONE" Language="en_US"><Text>No active deposits.</Text></Row>
     <Row Tag="LOC_WBL_UI_DEPOSIT_ROW" Language="en_US"><Text>Deposit #{1_id}: {2_principal} gold, matures turn {3_turn} ({4_left} turns left), return built up {5_accrued}.</Text></Row>
-    <Row Tag="LOC_WBL_UI_WITHDRAW_INFO" Language="en_US"><Text>Early withdrawal pays back only {1_pct} and forfeits the return. Arrears are paid first.</Text></Row>
+    <Row Tag="LOC_WBL_UI_WITHDRAW_INFO" Language="en_US"><Text>Early withdrawal pays back only {1_pct}% and forfeits the return. Arrears are paid first.</Text></Row>
     <Row Tag="LOC_WBL_UI_WITHDRAW_BTN" Language="en_US"><Text>Withdraw early ({1_payout})</Text></Row>
     <Row Tag="LOC_WBL_UI_DEPOSIT_NEW_HEADER" Language="en_US"><Text>New deposit</Text></Row>
     <Row Tag="LOC_WBL_UI_DEPOSIT_REFUSED" Language="en_US"><Text>Deposits are refused while you have arrears or are in default.</Text></Row>
@@ -116,8 +192,8 @@
     <Row Tag="LOC_WBL_UI_PERK_PREFERRED_0" Language="en_US"><Text>Own loan discount: none</Text></Row>
     <Row Tag="LOC_WBL_UI_PERK_PREFERRED_1" Language="en_US"><Text>Own loan discount: half</Text></Row>
     <Row Tag="LOC_WBL_UI_PERK_PREFERRED_2" Language="en_US"><Text>Own loan discount: full</Text></Row>
-    <Row Tag="LOC_WBL_UI_PERK_EXEMPT" Language="en_US"><Text>Liquidity price increase: you are exempt.</Text></Row>
-    <Row Tag="LOC_WBL_UI_PERK_NOT_EXEMPT" Language="en_US"><Text>Liquidity price increase: applies to you.</Text></Row>
+    <Row Tag="LOC_WBL_UI_PERK_EXEMPT" Language="en_US"><Text>When the bank runs low on gold, your loans don't cost more.</Text></Row>
+    <Row Tag="LOC_WBL_UI_PERK_NOT_EXEMPT" Language="en_US"><Text>When the bank runs low on gold, your loans cost more.</Text></Row>
     <Row Tag="LOC_WBL_UI_PERK_AID" Language="en_US"><Text>Aid credit is capped at {1_cap} Favor per turn.</Text></Row>
     <Row Tag="LOC_WBL_UI_THRESHOLD_LINE" Language="en_US"><Text>{1_name}: {2_need} gold ({3_state})</Text></Row>
     <Row Tag="LOC_WBL_UI_THRESHOLD_REACHED" Language="en_US"><Text>reached</Text></Row>
@@ -138,16 +214,16 @@
     <Row Tag="LOC_WBL_UI_PRESIDENT_YOU" Language="en_US"><Text>You are the Bank President since turn {1_turn}: +{2_favor} Favor and +{3_merchant} Great Merchant points per turn, an envoy every {4_turns} turns, a one-target freeze, and you see every civ's standing.</Text></Row>
     <Row Tag="LOC_WBL_UI_PRESIDENT_OTHER" Language="en_US"><Text>Bank President: {1_civ}.</Text></Row>
     <Row Tag="LOC_WBL_UI_PRESIDENT_NONE" Language="en_US"><Text>There is no Bank President.</Text></Row>
-    <Row Tag="LOC_WBL_UI_PRESIDENT_PROGRESS" Language="en_US"><Text>Eligible: {1_yesno}. Confirmed {2_count} of {3_needed} turns. Needs a {4_share} share. Era Score progress {5_turns} of {6_needed} turns.</Text></Row>
+    <Row Tag="LOC_WBL_UI_PRESIDENT_PROGRESS" Language="en_US"><Text>Eligible: {1_yesno}. Confirmed {2_count} of {3_needed} turns. Needs a {4_share}% share. Era Score progress {5_turns} of {6_needed} turns.</Text></Row>
     <Row Tag="LOC_WBL_UI_FREEZE_HEADER" Language="en_US"><Text>Lending freezes</Text></Row>
     <Row Tag="LOC_WBL_UI_FREEZE_RULE" Language="en_US"><Text>A freeze stops new loans and grants to a civ you are at war with. Existing loans keep going.</Text></Row>
     <Row Tag="LOC_WBL_UI_FREEZE_NONE" Language="en_US"><Text>No active freezes.</Text></Row>
     <Row Tag="LOC_WBL_UI_FREEZE_ROW" Language="en_US"><Text>Freeze on {1_civ}: {2_mode}, since turn {3_turn}.</Text></Row>
     <Row Tag="LOC_WBL_UI_FREEZE_BTN" Language="en_US"><Text>Freeze {1_civ} ({2_mode})</Text></Row>
     <Row Tag="LOC_WBL_UI_FREEZE_LIFT_BTN" Language="en_US"><Text>Lift freeze on {1_civ}</Text></Row>
-    <Row Tag="LOC_WBL_UI_FREEZE_COALITION" Language="en_US"><Text>coalition</Text></Row>
+    <Row Tag="LOC_WBL_UI_FREEZE_COALITION" Language="en_US"><Text>investors at war</Text></Row>
     <Row Tag="LOC_WBL_UI_FREEZE_PRESIDENT" Language="en_US"><Text>President</Text></Row>
-    <Row Tag="LOC_WBL_UI_BANK_POOL" Language="en_US"><Text>Bank pool {1_pool} of {2_cap} gold ({3_pct}).</Text></Row>
+    <Row Tag="LOC_WBL_UI_BANK_POOL" Language="en_US"><Text>Bank pool {1_pool} of {2_cap} gold ({3_pct}%).</Text></Row>
     <Row Tag="LOC_WBL_UI_BANK_TIER" Language="en_US"><Text>Liquidity: {1_tier}.</Text></Row>
     <Row Tag="LOC_WBL_UI_BANK_EFFECT" Language="en_US"><Text>Non-investors: loan price {1_v}, credit limit x{2_mult}.</Text></Row>
     <Row Tag="LOC_WBL_UI_BANK_EMERGENCY" Language="en_US"><Text>Emergency window: only Developing and Underdeveloped loans, grants and debt relief, up to the pool.</Text></Row>
@@ -165,6 +241,7 @@
     <Row Tag="LOC_WBL_UI_REASON_BANK_SUSPENDED" Language="en_US"><Text>The bank is suspended.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_SNAPSHOT_INCOMPLETE" Language="en_US"><Text>The bank couldn't read the game this turn.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_CAPABILITY_PENDING" Language="en_US"><Text>That feature isn't available yet.</Text></Row>
+    <Row Tag="LOC_WBL_UI_REASON_DISABLED_BUILD" Language="en_US"><Text>Turned off in this test build.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_PRICE_CHANGED" Language="en_US"><Text>The price changed. Check the new terms.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_NOT_FOUND" Language="en_US"><Text>That item doesn't exist anymore.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_NOT_OWNER" Language="en_US"><Text>That isn't yours.</Text></Row>
@@ -179,6 +256,7 @@
     <Row Tag="LOC_WBL_UI_REASON_POOL_INSUFFICIENT" Language="en_US"><Text>The bank pool can't cover that.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_LIQUIDITY_EMERGENCY" Language="en_US"><Text>The bank is in an emergency window.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_INSUFFICIENT_GOLD" Language="en_US"><Text>You don't have enough gold.</Text></Row>
+    <Row Tag="LOC_WBL_UI_REASON_INSUFFICIENT_FAVOR" Language="en_US"><Text>You don't have enough Diplomatic Favor.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_MILESTONE_INVALID" Language="en_US"><Text>That milestone isn't valid.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_MILESTONE_COMPLETE" Language="en_US"><Text>That milestone is already done.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_ALREADY_USED" Language="en_US"><Text>Already used.</Text></Row>
@@ -200,9 +278,80 @@
     <Row Tag="LOC_WBL_UI_REASON_ALREADY_FROZEN" Language="en_US"><Text>Already frozen.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_NO_ACTIVE_LOAN" Language="en_US"><Text>No active loan.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_MILESTONE_WINDOW" Language="en_US"><Text>A milestone can only be set on the turn the loan was taken.</Text></Row>
+    <Row Tag="LOC_WBL_UI_REASON_TURN_PENDING" Language="en_US"><Text>The bank is still processing this turn. Try again in a moment.</Text></Row>
+    <Row Tag="LOC_WBL_UI_REASON_MILESTONE_TOO_EASY" Language="en_US"><Text>That milestone is too easy. Pick a tech at least two research steps away, or a city 3 population above its size (2 for cities above 6).</Text></Row>
+    <Row Tag="LOC_WBL_UI_REASON_MILESTONE_TOO_FAR" Language="en_US"><Text>That tech is too far away. Pick one at most three research steps away.</Text></Row>
+    <Row Tag="LOC_WBL_UI_REASON_MILESTONE_RESTRUCTURED" Language="en_US"><Text>A restructured loan keeps its original loan's milestone.</Text></Row>
+    <Row Tag="LOC_WBL_UI_REASON_NO_WAR_TARGETS" Language="en_US"><Text>You aren't at war with anyone, so there is no one to freeze.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_MILESTONE_REQUIRED" Language="en_US"><Text>Pick a milestone first.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_NO_DISASTER_OFFER" Language="en_US"><Text>No disaster offer.</Text></Row>
-    <Row Tag="LOC_WBL_UI_REASON_NOT_INVESTOR" Language="en_US"><Text>You need more eligible capital.</Text></Row>
+    <Row Tag="LOC_WBL_UI_REASON_NOT_INVESTOR" Language="en_US"><Text>You need a bigger net deposit in the bank (your deposits minus what you owe it).</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_PRODUCT_UNAVAILABLE" Language="en_US"><Text>This loan type isn't available.</Text></Row>
+    <!-- MP game F fixes (decisions 58-61, fixes 1-6, screenshot items; 2026-11-15). -->
+    <Row Tag="LOC_WBL_UI_INCOME_NEG" Language="en_US"><Text>[COLOR_RED]{1_gpt}[ENDCOLOR] [ICON_Gold] per turn</Text></Row>
+    <Row Tag="LOC_WBL_UI_SUSPENDED_FUTURE_SCHEMA" Language="en_US"><Text>Another player is running a newer version of World Bank Loans. Everyone must use the same version.</Text></Row>
+    <Row Tag="LOC_WBL_UI_SUSPENDED_STATE" Language="en_US"><Text>The bank is suspended in this game ({1_reason}), so it can't be used. Lua.log has the details.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_OWNERSHIP" Language="en_US"><Text>This loan cancels {1_gold} gold of your ownership: your share falls from {2_before}% to {3_after}%.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_OWNERSHIP_LOST" Language="en_US"><Text>Benefits you would lose: {1_list}.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWN_EXPLAIN" Language="en_US"><Text>Loans, arrears and default reduce or cancel your ownership. Your deposit is still in the bank and still earns its return.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWN_FIGURES" Language="en_US"><Text>Deposited {1_dep} gold, owed to the bank {2_owed} gold, net {3_net} gold.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWN_COUNTS" Language="en_US"><Text>Counts toward ownership: {1_e} gold ({2_share}% share).</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWN_BLOCK_IN_DEFAULT" Language="en_US"><Text>While you are in default, your deposits don't count toward ownership.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWN_BLOCK_ARREARS" Language="en_US"><Text>While you have arrears, your deposits don't count toward ownership.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWN_BLOCK_RELIEF_PENDING" Language="en_US"><Text>While debt relief is pending, your deposits don't count toward ownership.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWN_BLOCK_NETTED" Language="en_US"><Text>Your loans cancel your deposits, so none of them count toward ownership.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BENEFITS_NETTED" Language="en_US"><Text>Your loans cancel your deposits, so no benefits apply.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWNERS_TT" Language="en_US"><Text>Each civ owns the bank in proportion to its net deposit: its deposits minus what it owes the bank (loans and recent forgiveness or aid). A civ in arrears, in default or waiting on debt relief owns nothing until that ends.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWNERS_NOT_COUNTING" Language="en_US"><Text>No one's deposits currently count toward ownership.</Text></Row>
+    <Row Tag="LOC_WBL_UI_OWNER_LINE2" Language="en_US"><Text>{1_name} {2_pct}% ({3_net} gold net)</Text></Row>
+    <Row Tag="LOC_WBL_UI_BOOK_HEADER" Language="en_US"><Text>As President you see every civ's figures:</Text></Row>
+    <Row Tag="LOC_WBL_UI_BOOK_LINE" Language="en_US"><Text>{1_name}: deposited {2_dep}, owed {3_owed}, net {4_net}</Text></Row>
+    <Row Tag="LOC_WBL_UI_DEPOSIT_ROW3" Language="en_US"><Text>Deposit #{1_id}: {2_principal} gold, matures turn {3_turn}, earned {4_accrued} gold so far.</Text></Row>
+    <Row Tag="LOC_WBL_UI_WITHDRAW_INFO2" Language="en_US"><Text>Withdrawing now pays back {1_payout} of your {2_principal} gold (you lose {3_loss}) and gives up the {4_accrued} gold return earned so far. Arrears are paid first.</Text></Row>
+    <Row Tag="LOC_WBL_UI_PRESIDENT_NEED_SHARE" Language="en_US"><Text>a {1_pct}% share</Text></Row>
+    <Row Tag="LOC_WBL_UI_PRESIDENT_NEED_CAPITAL" Language="en_US"><Text>{1_gold} more gold net deposit</Text></Row>
+    <Row Tag="LOC_WBL_UI_PRESIDENT_NEED_TURNS" Language="en_US"><Text>{1_count} of {2_needed} turns confirmed</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_PRESIDENT_NEEDS" Language="en_US"><Text>Needs {1_list}</Text></Row>
+    <Row Tag="LOC_WBL_UI_TILE_PRESIDENT_SOON" Language="en_US"><Text>Confirming</Text></Row>
+    <Row Tag="LOC_WBL_UI_PRESIDENT_PROGRESS2" Language="en_US"><Text>To become President: a {1_share}% share ({2_state}) and a net deposit of {3_gold} gold ({4_state}), held for {6_needed} turns (confirmed {5_count}). Era Score progress {7_turns} of {8_needed} turns.</Text></Row>
+    <Row Tag="LOC_WBL_UI_MET" Language="en_US"><Text>met</Text></Row>
+    <Row Tag="LOC_WBL_UI_MISSING" Language="en_US"><Text>not yet</Text></Row>
+    <Row Tag="LOC_WBL_UI_LOAN_MILESTONE2" Language="en_US"><Text>Milestone: {1_name} by turn {2_turn}, forgives {3_pct}% ({4_status}).</Text></Row>
+    <Row Tag="LOC_WBL_UI_MS_CITY" Language="en_US"><Text>your city</Text></Row>
+    <Row Tag="LOC_WBL_UI_MS_NONE_FITS_LOAN" Language="en_US"><Text>No milestone can be finished before this loan's halfway point.</Text></Row>
+    <Row Tag="LOC_WBL_UI_ONLY_INFRASTRUCTURE" Language="en_US"><Text>Only Developing civs can take an infrastructure loan.</Text></Row>
+    <Row Tag="LOC_WBL_UI_ONLY_GRANT" Language="en_US"><Text>Only Underdeveloped civs can get a development grant.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BANK_STATE_NORMAL" Language="en_US"><Text>The pool is the gold the bank has to lend; deposits can lift it above its cap. Normal: loans cost the usual price.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BANK_STATE_TIGHT" Language="en_US"><Text>The pool is the gold the bank has to lend. Tight (below its cap): loans cost a bit more and limits are lower, except for investors.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BANK_STATE_STRAINED" Language="en_US"><Text>The pool is the gold the bank has to lend. Strained (below half its cap): loans cost more and limits are halved, except for investors.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BANK_STATE_EMERGENCY" Language="en_US"><Text>The pool is the gold the bank has to lend. Emergency (below a fifth of its cap): only the loans and aid listed below are open.</Text></Row>
+    <Row Tag="LOC_WBL_UI_BANK_POOL_TT" Language="en_US"><Text>Normal at 100% of the cap or more, Tight from 50%, Strained from 20%, Emergency below that. The pool refills a little each turn.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_TAKE_LOAN" Language="en_US"><Text>Loan approved.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_AMOUNT_TAKE_LOAN" Language="en_US"><Text>Loan of {1_amount} gold approved.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_TAKE_LOAN" Language="en_US"><Text>Loan turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_CLAIM_RECOVERY" Language="en_US"><Text>Recovery loan approved.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_AMOUNT_CLAIM_RECOVERY" Language="en_US"><Text>Recovery loan of {1_amount} gold approved.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_CLAIM_RECOVERY" Language="en_US"><Text>Recovery loan turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_REPAY_EARLY" Language="en_US"><Text>Loan repaid.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_AMOUNT_REPAY_EARLY" Language="en_US"><Text>Loan repaid for {1_amount} gold.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_REPAY_EARLY" Language="en_US"><Text>Repayment turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_RESTRUCTURE" Language="en_US"><Text>Loan restructured.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_RESTRUCTURE" Language="en_US"><Text>Restructuring turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_DEBT_RELIEF" Language="en_US"><Text>Debt relief granted. Finish the milestone in time.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_DEBT_RELIEF" Language="en_US"><Text>Debt relief turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_SELECT_MILESTONE" Language="en_US"><Text>Milestone set.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_SELECT_MILESTONE" Language="en_US"><Text>Milestone turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_REQUEST_GRANT" Language="en_US"><Text>Grant approved. It is paid when you finish the milestone.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_REQUEST_GRANT" Language="en_US"><Text>Grant turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_DEPOSIT" Language="en_US"><Text>Deposit made.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_AMOUNT_DEPOSIT" Language="en_US"><Text>Deposit of {1_amount} gold made.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_DEPOSIT" Language="en_US"><Text>Deposit turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_WITHDRAW" Language="en_US"><Text>Deposit withdrawn.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_AMOUNT_WITHDRAW" Language="en_US"><Text>Withdrew {1_amount} gold.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_WITHDRAW" Language="en_US"><Text>Withdrawal turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_FREEZE_PLACE" Language="en_US"><Text>Freeze placed.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_FREEZE_PLACE" Language="en_US"><Text>Freeze turned down: {1_reason}</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_OK_FREEZE_LIFT" Language="en_US"><Text>Freeze lifted.</Text></Row>
+    <Row Tag="LOC_WBL_UI_LAST_FAIL_FREEZE_LIFT" Language="en_US"><Text>Lifting the freeze was turned down: {1_reason}</Text></Row>
   </LocalizedText>
 </GameData>

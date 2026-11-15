@@ -7,16 +7,16 @@
   <LocalizedText>
     <Row Tag="LOC_WBL_NOTIFY_LOAN_TAKEN_MESSAGE" Language="en_US"><Text>World Bank loan approved</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_LOAN_TAKEN_SUMMARY" Language="en_US"><Text>You got {2_Amount : number #} [ICON_Gold] from the World Bank as loan #{1_LoanID} (loan numbers count across all civs). Payments show in the Bank panel.</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_PAYMENT_MISSED_MESSAGE" Language="en_US"><Text>Loan payment missed</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_PAYMENT_MISSED_SUMMARY" Language="en_US"><Text>You couldn't cover {2_Amount : number #} [ICON_Gold] on World Bank loan #{1_LoanID}. It's now in arrears and picks up a fee each turn.</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_ARREARS_WARNING_MESSAGE" Language="en_US"><Text>Default warning</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_ARREARS_WARNING_SUMMARY" Language="en_US"><Text>You've been in arrears for {1_Turns : number #} turns. Pay it down soon or you'll go into default.</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE1_MESSAGE" Language="en_US"><Text>You're in default</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE1_SUMMARY" Language="en_US"><Text>The World Bank put you in default. It takes part of your income each turn and your cities take penalties until the arrears are paid.</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE2_MESSAGE" Language="en_US"><Text>Default got worse</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE2_SUMMARY" Language="en_US"><Text>You're still in default, so the penalties are heavier now and the bank takes more of your income.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_PAYMENT_MISSED_MESSAGE" Language="en_US"><Text>Payment missed on loan #{1_LoanID}</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_PAYMENT_MISSED_SUMMARY" Language="en_US"><Text>You couldn't cover {4_Amount : number #} [ICON_Gold] on World Bank loan #{1_LoanID} ({2_Principal : number #} [ICON_Gold], {3_Turns : number #} turns). That part is now in arrears and picks up a fee each turn.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_ARREARS_WARNING_MESSAGE" Language="en_US"><Text>Default warning: loan #{1_LoanID}</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_ARREARS_WARNING_SUMMARY" Language="en_US"><Text>World Bank loan #{1_LoanID} ({2_Principal : number #} [ICON_Gold], {3_Turns : number #} turns) goes into default after {4_Left : number #} more turns in arrears. Every turn it's behind counts, even if you catch up in between.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE1_MESSAGE" Language="en_US"><Text>Loan #{1_LoanID} is in default</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE1_SUMMARY" Language="en_US"><Text>World Bank loan #{1_LoanID} ({2_Principal : number #} [ICON_Gold], {3_Turns : number #} turns) is in default. Until all your arrears are paid, the bank takes part of your income each turn and your cities take penalties.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE2_MESSAGE" Language="en_US"><Text>Default got worse: loan #{1_LoanID}</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_STAGE2_SUMMARY" Language="en_US"><Text>World Bank loan #{1_LoanID} ({2_Principal : number #} [ICON_Gold], {3_Turns : number #} turns) is still in default, so the penalties are heavier now and the bank takes more of your income.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_DEFAULT_CLEARED_MESSAGE" Language="en_US"><Text>Out of default</Text></Row>
-    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_CLEARED_SUMMARY" Language="en_US"><Text>Your arrears are paid and the default penalties are gone. Your credit stays scarred for a while.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_DEFAULT_CLEARED_SUMMARY" Language="en_US"><Text>Your arrears are paid, so the default on World Bank loan #{1_LoanID} ({2_Principal : number #} [ICON_Gold], {3_Turns : number #} turns) is over and the penalties are gone. Your credit stays scarred for a while.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_RESTRUCTURED_MESSAGE" Language="en_US"><Text>Loan restructured</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_RESTRUCTURED_SUMMARY" Language="en_US"><Text>World Bank loan #{2_OldLoanID} is now loan #{1_LoanID} with a longer schedule. It cost {3_Favor : number #} [ICON_Favor] Diplomatic Favor.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_DEBT_RELIEF_MESSAGE" Language="en_US"><Text>Debt relief granted</Text></Row>
@@ -44,6 +44,10 @@
     <Row Tag="LOC_WBL_NOTIFY_GRANT_PAID_MESSAGE" Language="en_US"><Text>Development grant paid</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_GRANT_PAID_SUMMARY" Language="en_US"><Text>The World Bank paid you a {2_Amount : number #} [ICON_Gold] development grant. You don't pay it back.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_TIER_CHANGED_MESSAGE" Language="en_US"><Text>Development tier changed</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_ARREARS_WARNING_AGAIN_MESSAGE" Language="en_US"><Text>Loan #{1_LoanID} is behind again</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_ARREARS_WARNING_AGAIN_SUMMARY" Language="en_US"><Text>World Bank loan #{1_LoanID} ({2_Principal : number #} [ICON_Gold], {3_Turns : number #} turns) missed a payment again. Its earlier turns in arrears still count, so it goes into default after {4_Left : number #} more turns in arrears.</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_PAYOFF_AVAILABLE_MESSAGE" Language="en_US"><Text>You can pay off loan #{1_LoanID}</Text></Row>
+    <Row Tag="LOC_WBL_NOTIFY_PAYOFF_AVAILABLE_SUMMARY" Language="en_US"><Text>You have enough gold to repay World Bank loan #{1_LoanID} ({2_Principal : number #} [ICON_Gold], {3_Turns : number #} turns) in full: {4_Amount : number #} [ICON_Gold]. That clears its arrears, and once no loan has arrears you're out of default and the penalties end. Use Repay early on My loans.</Text></Row>
     <Row Tag="LOC_WBL_NOTIFY_TIER_CHANGED_SUMMARY" Language="en_US"><Text>The World Bank now rates you {1_Tier} (was {2_OldTier}). That changes which loans you can get and on what terms.</Text></Row>
     <Row Tag="LOC_WBL_UI_REASON_EFFECT_FAILED" Language="en_US"><Text>The bank couldn't apply that, so nothing changed. Lua.log has the details.</Text></Row>
   </LocalizedText>

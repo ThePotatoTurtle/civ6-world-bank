@@ -25,7 +25,8 @@ M.REASON_CODES = {
   "ENTITLEMENT_CLAIMED", "NOT_ELIGIBLE", "NOT_AT_WAR", "PRESIDENT_ONLY",
   "NO_STATE", "NOT_A_PLAYER", "NO_OFFER", "QUOTE_UNAVAILABLE", "NO_LOAN_OFFER", "RELIEF_TIER",
   "RELIEF_PENDING", "RELIEF_NO_ARREARS", "ALREADY_FROZEN", "NO_ACTIVE_LOAN", "MILESTONE_WINDOW",
-  "MILESTONE_REQUIRED", "NO_DISASTER_OFFER", "NOT_INVESTOR", "PRODUCT_UNAVAILABLE",
+  "MILESTONE_REQUIRED", "NO_DISASTER_OFFER", "NOT_INVESTOR", "PRODUCT_UNAVAILABLE", "MILESTONE_RESTRUCTURED",
+  "NO_WAR_TARGETS", "INSUFFICIENT_FAVOR", "MILESTONE_TOO_EASY", "MILESTONE_TOO_FAR", "TURN_PENDING",
   "REDUCER_ERROR",
 }
 
@@ -103,11 +104,13 @@ local function playerHasArrears(state, playerID)
   return false
 end
 
--- Decision 34: arrears clocks are Standard turns scaled by the state's speed scale.
-local function arrearsClocks(state, config)
+-- Decisions 34 and 57: arrears clocks are Standard turns by the loan's origination tier, scaled by
+-- the state's speed scale. The stage-2 index is the same for every tier.
+local function arrearsClocks(state, config, tier)
   local scale = num(state.speedScale)
   if scale <= 0 then scale = 1 end
-  return WBL_MATH.ArrearsClocks(scale, config)
+  if type(config.arrears.clockTurns[tier]) ~= "table" then tier = "DEVELOPED" end
+  return WBL_MATH.ArrearsClocks(scale, config, tier)
 end
 
 local function penaltyStage(player, config, state)
@@ -141,12 +144,15 @@ local function penaltyRows(player, config, stage)
   return rows
 end
 
-local function milestoneView(milestone)
+-- forgiveness: the milestone forgiveness of the loan's origination tier; deadlineTurn: the last turn to finish
+-- it (it expires at the halfway boundary). MP game F (Leon): the loan card showed only the status.
+local function milestoneView(milestone, forgiveness)
   if type(milestone) ~= "table" then return {kind = "NONE", status = "NONE", statusKey = "LOC_WBL_UI_MS_NONE"} end
   local status = milestone.status or "NONE"
+  local halfway = num(milestone.halfwayTurn)
   return {kind = milestone.kind or "NONE", target = milestone.target, cityID = milestone.cityID,
-    halfwayTurn = milestone.halfwayTurn, fraction = milestone.fraction, status = status,
-    statusKey = M.Key("MS", status)}
+    halfwayTurn = milestone.halfwayTurn, deadlineTurn = math.max(0, halfway - 1), fraction = milestone.fraction,
+    forgiveness = num(forgiveness), status = status, statusKey = M.Key("MS", status)}
 end
 
 local function productView(product, config, tier, growth)
@@ -261,15 +267,14 @@ end
 local function buildLoans(state, player, offer, config, view)
   local loans = {rows = {}, relief = nil, penalties = {}}
   local stage = penaltyStage(player, config, state)
-  local clocks = arrearsClocks(state, config)
+  local stage2Start = arrearsClocks(state, config).stage2StartTurn
   loans.penaltyStage = stage
   loans.penalties = penaltyRows(player, config, stage)
   loans.inDefault = player.inDefault == true
   loans.defaultTurn = num(player.defaultTurn)
   loans.arrearsTurns = num(player.arrearsTurns)
-  -- Game-turn clock limits for the warning line (decision 34).
-  loans.warningTurns, loans.defaultTurns = clocks.warningTurns, clocks.defaultTurns
-  loans.warning = loans.arrearsTurns >= clocks.warningTurns and not loans.inDefault
+  -- Warning line: the loan in arrears closest to its own default (decision 57); filled below.
+  loans.warning, loans.warningLoanID, loans.turnsToDefault = false, 0, 0
   loans.arrearsActive = playerHasArrears(state, player.playerID)
   loans.rating = player.rating
   local totalOwed, forgivable = 0, 0
@@ -287,8 +292,25 @@ local function buildLoans(state, player, offer, config, view)
         installmentsLeft = math.max(0, remaining), nextDueTurn = loan.nextDueTurn,
         nextPayment = 0, missedCount = num(loan.missedCount), inArrears = buckets.arrears > 0,
         nominalRate = loan.nominalRate, valueRatio = loan.valueRatio,
-        milestone = milestoneView(loan.milestone),
+        milestone = milestoneView(loan.milestone, config.tiers[loan.originTier or player.tier]
+          and config.tiers[loan.originTier or player.tier].milestoneForgiveness),
+        originalPrincipal = num(loan.principal), paymentTurns = num(loan.paymentTurns), graceTurns = num(loan.graceTurns),
+        originTurn = num(loan.originTurn),
+        arrearsTurns = num(loan.arrearsTurns), defaultTurn = num(loan.defaultTurn),
       }
+      -- Decision 57: this loan's own clock and stage.
+      local clocks = arrearsClocks(state, config, loan.originTier)
+      row.warningTurns, row.defaultTurns = clocks.warningTurns, clocks.defaultTurns
+      row.turnsToDefault = math.max(0, clocks.defaultTurns - row.arrearsTurns)
+      if row.defaultTurn >= stage2Start then row.stage = "DEFAULT_STAGE2"
+      elseif row.defaultTurn > 0 then row.stage = "DEFAULT"
+      elseif row.inArrears then row.stage = "ARREARS"
+      else row.stage = "ON_TIME" end
+      row.stageKey = M.Key("LOAN_STAGE", row.stage)
+      if row.stage == "ARREARS" and not loans.inDefault and row.arrearsTurns >= clocks.warningTurns
+          and (not loans.warning or row.turnsToDefault < loans.turnsToDefault) then
+        loans.warning, loans.warningLoanID, loans.turnsToDefault = true, loan.loanID, row.turnsToDefault
+      end
       row.disasterKey = M.DisasterKey(row.disasterEventKey)
       if remaining > 0 then
         row.nextPayment = (num(loan.scheduledPrincipal) + num(loan.futureInterest)) / remaining
@@ -332,9 +354,19 @@ local function buildLoans(state, player, offer, config, view)
       row.restructure.favorCost = (lo and finite(lo.restructureFavorCost)) and lo.restructureFavorCost
         or config.relief.restructureFavorCost
       row.restructure.termStandardTurns = config.relief.restructureTermTurns
-      -- A milestone may only be chosen in the origination turn for a loan without one.
-      if type(loan.milestone) == "table" and loan.milestone.status ~= "NONE" and loan.milestone.status ~= nil then
+      row.restructure.termTurns = WBL_MATH.ScaleTurns(config.relief.restructureTermTurns, view.scale)
+      -- Stage 5 item 6: totals that add up, rounded once (whole gold) and the parts derived from them.
+      row.summary = M.LoanSummary(row)
+      row.interestPremium = finite(loan.valueRatio) and math.max(0, loan.valueRatio - 1) or 0
+      row.dueThisTurn = row.installmentsLeft > 0 and num(loan.nextDueTurn) <= view.turn + 1 and row.nextPayment or 0
+      -- A milestone may only be chosen in the origination turn for a loan without one; a
+      -- restructured loan keeps its original loan's milestone and never gains one (reducer
+      -- SELECT_MILESTONE; MP games C and D offered it on the replacement loan).
+      if (type(loan.milestone) == "table" and loan.milestone.status ~= "NONE" and loan.milestone.status ~= nil)
+          or loan.milestoneUsed == true then
         row.selectMilestone = blocked("ALREADY_USED")
+      elseif num(loan.parentLoanID) ~= 0 then
+        row.selectMilestone = blocked("MILESTONE_RESTRUCTURED")
       elseif loan.originTurn ~= view.turn then
         row.selectMilestone = blocked("MILESTONE_WINDOW")
       elseif view.suspended then
@@ -376,7 +408,10 @@ local function exposure(state, playerID, view, config)
   local memory = WBL_MATH.ScaleTurns(config.investors.eligibility.subsidyMemoryTurns, num(state.speedScale))
   for i = 1, #(state.subsidies or {}) do
     local s = state.subsidies[i]
-    if s.playerID == playerID and view.turn - num(s.turn) <= memory then total = total + num(s.amount) end
+    -- Same window as WBL_MATH.BankExposure: received on turn T, counted for turns T .. T + memory - 1.
+    if s.playerID == playerID and num(s.turn) <= view.turn and view.turn - num(s.turn) < memory then
+      total = total + num(s.amount)
+    end
   end
   return total
 end
@@ -405,6 +440,18 @@ local function buildInvest(state, player, offer, config, view)
     end
   end
   invest.activePrincipal = active
+  -- Decision 58: ownership counts deposits net of what the civ owes the bank (loans and recent subsidies).
+  invest.deposited, invest.owed = active, invest.exposure
+  invest.net = active - invest.exposure
+  local blockReason = ""
+  if active > 0 then
+    if player.inDefault then blockReason = "IN_DEFAULT"
+    elseif playerHasArrears(state, player.playerID) then blockReason = "ARREARS"
+    elseif type(player.relief) == "table" and player.relief.status == "PENDING" then blockReason = "RELIEF_PENDING"
+    elseif invest.net <= 0 then blockReason = "NETTED" end
+  end
+  invest.blockReason = blockReason
+  invest.blockKey = blockReason ~= "" and M.Key("OWN_BLOCK", blockReason) or ""
   local ladder = offer and offer.ladder or {}
   invest.ladder = ladder
   -- Next capital thresholds, in U. "post-loan" ones apply to E left after a loan.
@@ -451,6 +498,11 @@ local function buildInvest(state, player, offer, config, view)
     eligible = type(ladder) == "table" and ladder.presidentEligible == true,
     confirmCount = num(player.presidentConfirmCount), confirmNeeded = confirmNeeded,
     shareNeeded = config.investors.presidentShareThreshold,
+    -- Fix 3 (MP game F): name every missing condition, not only the share.
+    shareMet = num(player.eligibleShare) + config.precision.shareStepTolerance >= config.investors.presidentShareThreshold,
+    capitalNeeded = elig.presidentFloorMultiple * unit,
+    capitalMet = unit > 0 and E >= elig.presidentFloorMultiple * unit,
+    capitalRemaining = math.max(0, elig.presidentFloorMultiple * unit - E),
     eraTurns = num(player.presidentTurnsThisEra),
     eraTurnsNeeded = WBL_MATH.ScaleTurns(config.investors.presidentEraTurns, num(state.speedScale)),
     perks = {favor = config.investors.presidentFavor, merchantPoints = config.investors.presidentMerchantPoints,
@@ -474,7 +526,9 @@ local function buildInvest(state, player, offer, config, view)
   elseif not dep then depositBlock = "NO_OFFER" end
   invest.deposit = {available = depositBlock == "", reason = depositBlock, reasonKey = reasonKey(depositBlock), terms = {}}
   for i = 1, #(dep and dep.terms or {}) do
+    -- Screenshot item 1: termTurns is the term in this game's turns (the payback turn already used them).
     invest.deposit.terms[#invest.deposit.terms + 1] = {termStandardTurns = dep.terms[i].termStandardTurns,
+      termTurns = WBL_MATH.ScaleTurns(dep.terms[i].termStandardTurns, view.scale),
       returnFraction = dep.terms[i].returnFraction}
   end
   if invest.deposit.available and #invest.deposit.terms == 0 then
@@ -499,16 +553,27 @@ local function buildInvest(state, player, offer, config, view)
       placedTurn = f.placedTurn, canLift = f.requesterID == player.playerID and not view.suspended,
       isTarget = f.targetID == player.playerID}
   end
+  -- Only civs this player is at war with can be frozen (reducer FREEZE_PLACE: NOT_AT_WAR; MP game C
+  -- showed buttons for every civ). The offer's atWarWith is the boundary snapshot's war list.
+  local wars = {}
+  for i = 1, #((offer and offer.atWarWith) or {}) do wars[offer.atWarWith[i]] = true end
+  local anyMode = false
   for i = 1, #(state.players or {}) do
     local other = state.players[i]
     if other.playerID ~= player.playerID then
-      local t = {playerID = other.playerID, modes = {}, frozen = findBy(state.freezes, "targetID", other.playerID) ~= nil}
-      if freezes.canPlace and not t.frozen then
+      local t = {playerID = other.playerID, modes = {}, atWar = wars[other.playerID] == true,
+        frozen = findBy(state.freezes, "targetID", other.playerID) ~= nil}
+      if freezes.canPlace and t.atWar and not t.frozen then
         if solo then t.modes[#t.modes + 1] = "PRESIDENT" end
         if coalition then t.modes[#t.modes + 1] = "COALITION" end
       end
+      if #t.modes > 0 then anyMode = true end
       freezes.targets[#freezes.targets + 1] = t
     end
+  end
+  if freezes.canPlace and not anyMode then
+    freezes.noTargetReason = "NO_WAR_TARGETS"
+    freezes.noTargetKey = reasonKey("NO_WAR_TARGETS")
   end
   invest.freezes = freezes
   return invest
@@ -558,13 +623,21 @@ function M.DisasterKey(eventKey)
 end
 
 -- state: decoded published state. offers: optional array (defaults to state.offers).
--- facts: optional engine-side facts gathered by the panel: milestoneOptions = array of {kind, target, cityID, name}.
+-- facts: optional engine-side facts gathered by the panel: milestoneOptions = array of {kind, target, cityID, name,
+-- turnsNeeded (estimate, optional), never (city not growing, optional)}.
 function M.BuildView(state, localPlayerID, config, offers, facts)
   config = config or WBL_CONFIG
   if type(state) ~= "table" then
     return {ok = false, reason = "NO_STATE", reasonKey = reasonKey("NO_STATE")}
   end
   local player = findBy(state.players, "playerID", localPlayerID)
+  -- Fix 2 (MP game F): a suspended fallback state has no players; say why instead of "only major civs".
+  if state.suspended == true and not player then
+    local why = tostring(state.suspendReason or "")
+    local key = "LOC_WBL_UI_SUSPENDED_STATE"
+    if why == "FUTURE_SCHEMA" then key = "LOC_WBL_UI_SUSPENDED_FUTURE_SCHEMA" end
+    return {ok = false, reason = "BANK_SUSPENDED", reasonKey = key, suspendReason = why}
+  end
   if not player then
     return {ok = false, reason = "NOT_A_PLAYER", reasonKey = reasonKey("NOT_A_PLAYER")}
   end
@@ -578,11 +651,29 @@ function M.BuildView(state, localPlayerID, config, offers, facts)
     lastResult = nil,
   }
   view.suspendedKey = view.suspended and "LOC_WBL_UI_SUSPENDED" or ""
+  -- Speed scale for display in game turns (stage 5 item 5); requests keep Standard terms.
+  view.scale = num(state.speedScale) > 0 and num(state.speedScale) or 1
   view.borrow = buildBorrow(state, player, offer, config, view)
   view.loans = buildLoans(state, player, offer, config, view)
   view.invest = buildInvest(state, player, offer, config, view)
   view.bank = buildBank(state, player, offer, config, view, view.invest)
   view.rating, view.tier = player.rating, player.tier
+  -- Stage 5 item 1: loan payments due at the next boundary and per turn while every loan pays.
+  view.loans.dueThisTurn, view.loans.perTurn = 0, 0
+  for i = 1, #view.loans.rows do
+    local row = view.loans.rows[i]
+    view.loans.dueThisTurn = view.loans.dueThisTurn + num(row.dueThisTurn)
+    if row.installmentsLeft > 0 then view.loans.perTurn = view.loans.perTurn + num(row.nextPayment) end
+  end
+  -- Stage 5 item 12: ownership by eligible share, largest first (players with a share only). Item 19: each
+  -- owner's net deposit (its eligible capital) is public; deposited and owed per civ only for the President.
+  view.invest.owners = M.Owners(state)
+  view.invest.anyDeposits = M.AnyActiveDeposits(state)
+  view.invest.totalEligible = 0
+  for i = 1, #view.invest.owners do
+    view.invest.totalEligible = view.invest.totalEligible + view.invest.owners[i].eligibleCapital
+  end
+  if view.invest.president.isPresident then view.invest.book = M.Book(state, view, config) end
   -- Milestone picker options: NONE first, DISTRICT only when the S6 gate is verified.
   local options = {{kind = "NONE", target = "", cityID = 0}}
   local supplied = facts and facts.milestoneOptions or {}
@@ -590,7 +681,8 @@ function M.BuildView(state, localPlayerID, config, offers, facts)
     local option = supplied[i]
     if option.kind == "POPULATION" or option.kind == "TECH"
       or (option.kind == "DISTRICT" and config.features.districtMilestoneVerified) then
-      options[#options + 1] = {kind = option.kind, target = option.target, cityID = option.cityID or 0, name = option.name}
+      options[#options + 1] = {kind = option.kind, target = option.target, cityID = option.cityID or 0, name = option.name,
+        turnsNeeded = option.turnsNeeded, never = option.never == true}
     end
   end
   view.milestoneOptions = options
@@ -601,6 +693,95 @@ function M.BuildView(state, localPlayerID, config, offers, facts)
       nonce = player.lastResult.nonce}
   end
   return view
+end
+
+-- Stage 5 item 6: a loan row's figures in whole gold that add up. owe = everything still owed
+-- (rounded once); borrowed = principal left (scheduled + overdue); interest = owe - borrowed;
+-- payNow = the Repay early total; save = owe - payNow (never below zero).
+function M.LoanSummary(row)
+  local function whole(x) return math.floor(num(x) + 0.5) end
+  local owe = whole(row.totalOwed)
+  local borrowed = math.min(owe, whole(row.principal))
+  local payNow = row.repay and row.repay.available and whole(row.repay.totalDue) or nil
+  return {owe = owe, borrowed = borrowed, interest = owe - borrowed, payNow = payNow,
+    save = payNow and math.max(0, owe - payNow) or nil, payment = whole(row.nextPayment),
+    payments = row.installmentsLeft, overdue = whole(row.arrears)}
+end
+
+-- Stage 5 item 12: players with a positive eligible share, largest first, then by player ID. eligibleCapital is
+-- the civ's net deposit floored at 0 (item 19, public: a negative net would reveal a debt).
+function M.Owners(state)
+  local out = {}
+  for i = 1, #(state.players or {}) do
+    local p = state.players[i]
+    if finite(p.eligibleShare) and p.eligibleShare > 0 then
+      out[#out + 1] = {playerID = p.playerID, share = p.eligibleShare, eligibleCapital = num(p.eligibleCapital)}
+    end
+  end
+  table.sort(out, function(a, b)
+    if a.share ~= b.share then return a.share > b.share end
+    return a.playerID < b.playerID
+  end)
+  return out
+end
+
+-- Decision 59: any active deposit in the bank (the ring then says deposits exist but none count).
+function M.AnyActiveDeposits(state)
+  for i = 1, #(state.deposits or {}) do
+    if state.deposits[i].status == "ACTIVE" and num(state.deposits[i].principal) > 0 then return true end
+  end
+  return false
+end
+
+-- Item 19 (President only): every civ with deposits or debt, by player ID: deposited, owed, net (may be negative).
+function M.Book(state, view, config)
+  local out = {}
+  for i = 1, #(state.players or {}) do
+    local p = state.players[i]
+    local deposited = 0
+    for j = 1, #(state.deposits or {}) do
+      local d = state.deposits[j]
+      if d.playerID == p.playerID and d.status == "ACTIVE" then deposited = deposited + num(d.principal) end
+    end
+    local owed = exposure(state, p.playerID, view, config)
+    if deposited > 0 or owed > 0 then
+      out[#out + 1] = {playerID = p.playerID, deposited = deposited, owed = owed, net = deposited - owed,
+        share = num(p.eligibleShare)}
+    end
+  end
+  table.sort(out, function(a, b) return a.playerID < b.playerID end)
+  return out
+end
+
+-- Decision 58: what a new loan of `amount` does to the borrower's ownership; nil when it changes nothing.
+-- The loan's principal joins the civ's exposure at once, so E' = max(0, deposited - owed - amount).
+function M.LoanOwnershipImpact(invest, amount)
+  if type(invest) ~= "table" or not finite(amount) or amount <= 0 then return nil end
+  local E = num(invest.eligibleCapital)
+  if E <= 0 then return nil end
+  local after = math.max(0, num(invest.deposited) - num(invest.owed) - amount)
+  if after >= E then return nil end
+  local others = math.max(0, num(invest.totalEligible) - E)
+  local shareAfter = (others + after) > 0 and after / (others + after) or 0
+  local lost = {}
+  for i = 1, #(invest.thresholds or {}) do
+    local th = invest.thresholds[i]
+    if (th.key == "ENTRY" or th.key == "PREFERRED_HALF" or th.key == "PREFERRED_FULL" or th.key == "PRESIDENT")
+        and th.reached and after < th.needed then
+      lost[#lost + 1] = th.textKey
+    end
+  end
+  return {before = E, after = after, cancelled = E - after, shareBefore = num(invest.eligibleShare),
+    shareAfter = shareAfter, lostKeys = lost}
+end
+
+-- Decision 43 (stage 5 item 8): would this loan push income below zero? netGPT is the panel's live
+-- figure; perTurn every loan's current payment; newPayment the new loan's per-turn payment.
+function M.LoanWarning(netGPT, perTurn, newPayment)
+  if not (finite(netGPT) and finite(perTurn) and finite(newPayment)) then return nil end
+  local after = netGPT - perTurn - newPayment
+  if after >= 0 then return nil end
+  return {income = netGPT, current = perTurn, new = newPayment, total = perTurn + newPayment, after = after}
 end
 
 -- Amount for shortcut step index `step` (1..#AMOUNT_STEPS) of `maxAmount`, always whole gold, never above the

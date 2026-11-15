@@ -290,11 +290,23 @@ function M.ReferenceGroup(players, borrowerIsHuman, config)
   return group
 end
 
-function M.ReferenceMedians(players, borrowerIsHuman, config)
-  local group = M.ReferenceGroup(players, borrowerIsHuman, config)
+local function groupMedians(group)
   local scores, incomes = {}, {}
   for i = 1, #group do scores[i], incomes[i] = group[i].score, group[i].netGPT end
   return M.Median(scores), M.Median(incomes), #group
+end
+
+-- Decision 42: a human borrower's score median is the higher of the living humans' median and
+-- the all-majors median (AI scores difficulty-adjusted), so humans trailing the AIs drop a tier.
+-- The income median and group count stay the human group's (blend cap and ClassifyTier unchanged).
+-- With one living human, or no AIs, this is the old result.
+function M.ReferenceMedians(players, borrowerIsHuman, config)
+  local score, gpt, count = groupMedians(M.ReferenceGroup(players, borrowerIsHuman, config))
+  if borrowerIsHuman then
+    local all = groupMedians(M.ReferenceGroup(players, false, config))
+    if all ~= nil and score ~= nil and all > score then score = all end
+  end
+  return score, gpt, count
 end
 
 function M.DevelopmentRatio(rawScore, referenceMedian, config)
@@ -522,12 +534,16 @@ function M.EraCreditMinimum(eraType, scale, config)
   return scaled
 end
 
-function M.BaseCreditLimit(rating, netGPT, eraMinimum, config)
+-- Decision 50: the GPT multiple counts Standard turns of income, so it scales with game speed
+-- (CostMultiplier / 100) exactly like the era floor; a maximum loan then costs the same share of
+-- income per turn at every speed.
+function M.BaseCreditLimit(rating, netGPT, eraMinimum, config, scale)
   local c = configOrDefault(config)
   requireNonnegative(eraMinimum, "eraMinimum")
   assert(c.credit[rating] and finite(netGPT))
+  assert(finite(scale) and scale > 0, "credit limit speed scale must be finite and positive")
   if rating == "D" then return 0 end
-  return math.max(eraMinimum, math.max(0, netGPT) * c.credit[rating].limitMultiple)
+  return math.max(eraMinimum, math.max(0, netGPT) * c.credit[rating].limitMultiple * scale)
 end
 
 function M.AvailableCredit(limit, outstandingPrincipal)
@@ -609,10 +625,26 @@ function M.AIShouldBorrow(gold, netGPT, arrears, activeLoans, config)
     and arrears == 0 and activeLoans < c.ai.maxLoans
 end
 
-function M.AILoanAmount(netGPT, config)
+-- Decision 44: the multiple counts Standard turns of income, so it scales with game speed like
+-- every other duration-based size; an Online AI asks for half the Standard amount.
+function M.AILoanAmount(netGPT, config, scale)
   local c = configOrDefault(config)
   requireNonnegative(netGPT, "netGPT")
-  return netGPT * c.ai.loanGptMultiple
+  requirePositive(scale, "scale")
+  return netGPT * c.ai.loanGptMultiple * scale
+end
+
+-- Decision 51: the largest principal whose payment per game turn (principal x (1 + nominalRate) /
+-- paymentTurns), added to the AI's existing scheduled payments, stays within maxPaymentShare of net GPT.
+function M.AIPaymentCapPrincipal(netGPT, scheduledPayment, nominalRate, paymentTurns, config)
+  local c = configOrDefault(config)
+  requireNonnegative(scheduledPayment, "scheduledPayment")
+  requireNonnegative(nominalRate, "nominalRate")
+  requirePositive(paymentTurns, "paymentTurns")
+  assert(finite(netGPT), "netGPT must be finite")
+  local room = c.ai.maxPaymentShare * math.max(0, netGPT) - scheduledPayment
+  if room <= 0 then return 0 end
+  return room * paymentTurns / (1 + nominalRate)
 end
 
 -- Decision 34: arrears.simpleRate is per Standard turn; the per-game-turn rate divides by the
@@ -625,18 +657,21 @@ function M.ArrearsFeeRate(scale, config)
   return c.arrears.simpleRate / scale
 end
 
--- Decision 34: the warning, default-entry and stage-2 clocks are Standard turns converted with
--- ScaleTurns. stage2StartTurn is a default-turn index: stage 1 lasts (index - 1) Standard turns.
--- Returns game-turn counts {warningTurns, defaultTurns, stage2StartTurn}.
-function M.ArrearsClocks(scale, config)
+-- Decisions 34 and 57: the warning and default thresholds count a loan's cumulative game turns in
+-- arrears and depend on the tier the loan was taken at (`tier`, a key of arrears.clockTurns); all are
+-- Standard turns converted with ScaleTurns. stage2StartTurn is a default-turn index: stage 1 lasts
+-- (index - 1) Standard turns. Returns game-turn counts {warningTurns, defaultTurns, stage2StartTurn}.
+function M.ArrearsClocks(scale, config, tier)
   local c = configOrDefault(config)
   local a = c.arrears
-  requireInteger(a.warningTurns, "arrears.warningTurns")
-  requireInteger(a.defaultTurns, "arrears.defaultTurns")
+  local turns = type(a.clockTurns) == "table" and a.clockTurns[tier] or nil
+  assert(type(turns) == "table", "arrears.clockTurns has no row for tier " .. tostring(tier))
+  requireInteger(turns.warning, "arrears.clockTurns.warning")
+  requireInteger(turns.default, "arrears.clockTurns.default")
   requireID(a.stage2StartTurn, "arrears.stage2StartTurn")
   if scale == nil then scale = 1 end
   requirePositive(scale, "scale")
-  return {warningTurns = M.ScaleTurns(a.warningTurns, scale), defaultTurns = M.ScaleTurns(a.defaultTurns, scale),
+  return {warningTurns = M.ScaleTurns(turns.warning, scale), defaultTurns = M.ScaleTurns(turns.default, scale),
     stage2StartTurn = M.ScaleTurns(a.stage2StartTurn - 1, scale) + 1}
 end
 
@@ -1211,6 +1246,70 @@ function M.MilestoneForgive(loan, tier, config)
 end
 
 -- Exclusive halfway turn: completion must happen at a turn strictly before it.
+-- Decision 54: research steps from what a player knows to `target` (0 = researched, 1 = researchable
+-- now, 2 = one unresearched prerequisite away, ...). prereqs maps a tech type to its ordered list of
+-- prerequisite types; researched(type) -> boolean. Pure: callers read the engine. Counting stops at
+-- `cap` (returns cap when the tech is at least that far), so the walk stays small.
+function M.TechSteps(target, prereqs, researched, cap)
+  requireID(cap, "cap")
+  local memo = {}
+  local function steps(tech, depth)
+    if memo[tech] ~= nil then return memo[tech] end
+    if researched(tech) then memo[tech] = 0; return 0 end
+    if depth >= cap then return cap end
+    local most = 0
+    local list = prereqs[tech] or {}
+    for i = 1, #list do
+      local s = steps(list[i], depth + 1)
+      if s > most then most = s end
+      if most + 1 >= cap then break end
+    end
+    local result = math.min(cap, most + 1)
+    memo[tech] = result
+    return result
+  end
+  return steps(target, 0)
+end
+
+-- The unresearched techs needed for `target`, the target last, each once, in prerequisite order.
+function M.TechChain(target, prereqs, researched)
+  local out, seen = {}, {}
+  local function visit(tech)
+    if seen[tech] or researched(tech) then return end
+    seen[tech] = true
+    local list = prereqs[tech] or {}
+    for i = 1, #list do visit(list[i]) end
+    out[#out + 1] = tech
+  end
+  visit(target)
+  return out
+end
+
+-- Decision 54: the smallest population target for a city of `population`: + 3 when small, + 2 otherwise.
+function M.PopulationMilestoneTarget(population, config)
+  local c = configOrDefault(config)
+  requireNonnegative(population, "population")
+  local ms = c.milestones
+  if population <= ms.populationSmallCity then return population + ms.populationStepSmall end
+  return population + ms.populationStepLarge
+end
+
+-- Decision 54: "" when a target is hard enough, else the refusal reason. fact: the snapshot fact
+-- (techSteps for TECH, population for POPULATION); m: the chosen milestone.
+function M.MilestoneDifficulty(m, fact, config)
+  local c = configOrDefault(config)
+  local ms = c.milestones
+  if m.kind == "TECH" then
+    if not finite(fact.techSteps) then return "MILESTONE_INVALID" end
+    if fact.techSteps < ms.techMinSteps then return "MILESTONE_TOO_EASY" end
+    if fact.techSteps > ms.techMaxSteps then return "MILESTONE_TOO_FAR" end
+  elseif m.kind == "POPULATION" then
+    if not finite(fact.population) then return "MILESTONE_INVALID" end
+    if m.target < M.PopulationMilestoneTarget(fact.population, c) then return "MILESTONE_TOO_EASY" end
+  end
+  return ""
+end
+
 function M.MilestoneHalfwayTurn(originTurn, graceTurns, paymentTurns)
   requireInteger(originTurn, "originTurn")
   requireInteger(graceTurns, "graceTurns")

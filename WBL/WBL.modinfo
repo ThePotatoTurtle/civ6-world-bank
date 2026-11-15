@@ -35,6 +35,9 @@
       <File>Scripts/WBL_Snapshot.lua</File>
       <File>Scripts/WBL_Effects.lua</File>
       <File>Scripts/WBL_BankView.lua</File>
+      <File>Scripts/WBL_Probes.lua</File>
+      <File>Textures/WBL_InfoBadge.dds</File>
+      <File>Textures/WBL_PieRing.dds</File>
     </ImportFiles>
     <AddGameplayScripts id="WBL_Gameplay" criteria="WBL_XP2">
       <File>Scripts/WBL_Bank.lua</File>
@@ -58,12 +61,15 @@
     <File>Scripts/WBL_Config.lua</File>
     <File>Scripts/WBL_Effects.lua</File>
     <File>Scripts/WBL_Math.lua</File>
+    <File>Scripts/WBL_Probes.lua</File>
     <File>Scripts/WBL_Reducer.lua</File>
     <File>Scripts/WBL_Snapshot.lua</File>
     <File>Scripts/WBL_State.lua</File>
     <File>Text/WBL_Text.xml</File>
     <File>Text/WBL_UI_Text.xml</File>
     <File>UI/WBL_BankPanel.lua</File>
+    <File>Textures/WBL_InfoBadge.dds</File>
+    <File>Textures/WBL_PieRing.dds</File>
     <File>UI/WBL_BankPanel.xml</File>
   </Files>
 </Mod>

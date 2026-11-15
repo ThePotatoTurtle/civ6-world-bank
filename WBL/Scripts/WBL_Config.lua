@@ -1,6 +1,7 @@
 -- Canonical defaults. Calibration and unspecified production values are documented in TUNING.md.
 -- The standalone dev mod receives an identical generated copy of this file.
 WBL_CONFIG = {
+  build = "production", -- Build label printed at load; the MP test build overrides it.
   version = "0.0.0", -- Production semantic version; no playable release exists yet.
   devVersion = "0.0.0.12", -- Dev version targeting the production version above.
   growth = {
@@ -30,6 +31,7 @@ WBL_CONFIG = {
       DIFFICULTY_EMPEROR = 1.10, -- Reference-score divisor; provisional seed, not measured.
       DIFFICULTY_IMMORTAL = 1.175, -- Reference-score divisor; provisional seed, not measured.
       DIFFICULTY_DEITY = 1.25, -- Reference-score divisor; approximate spec seed, pending S12.
+      DIFFICULTY_LEVEL_13 = 1.25, -- Decision 46: Sid Meier's difficulty as changed by another mod, treated as Deity.
     },
     DEVELOPED = {
       valueRatio = 1.10, -- Ordinary repayment present value per gold borrowed; Leon 2026-10-28.
@@ -53,10 +55,19 @@ WBL_CONFIG = {
       penaltyStrength = 0.75, -- Fraction of base default penalties, excluding garnishing.
     },
   },
+  -- Decision 54: harder milestone targets. Forgiveness amounts (decision 18) are unchanged.
+  milestones = {
+    techMinSteps = 2, -- A tech target needs at least one unresearched prerequisite: 2 = one step past researchable.
+    techMaxSteps = 3, -- And at most this many research steps away (the target itself counts as one).
+    populationSmallCity = 6, -- Cities at or below this population are small (Claude's proposal; adjustable).
+    populationStepSmall = 3, -- Population target for a small city: current + this.
+    populationStepLarge = 2, -- Population target for a larger city: current + this.
+  },
   credit = {
-    A = {limitMultiple = 15, valueAdjustment = -0.05}, -- GPT multiple and V fraction.
-    B = {limitMultiple = 10, valueAdjustment = 0}, -- GPT multiple and V fraction.
-    C = {limitMultiple = 7.5, valueAdjustment = 0.10}, -- GPT multiple and V fraction.
+    -- limitMultiple: Standard turns of net GPT, scaled by game speed like the era floor (decision 50).
+    A = {limitMultiple = 20, valueAdjustment = -0.05}, -- GPT multiple (decision 50) and V fraction.
+    B = {limitMultiple = 15, valueAdjustment = 0}, -- GPT multiple (decision 50) and V fraction.
+    C = {limitMultiple = 10, valueAdjustment = 0.10}, -- GPT multiple (decision 50) and V fraction.
     D = {limitMultiple = 0, valueAdjustment = 0}, -- No new borrowing; restore C after all current bank debt is settled.
     scarValueAdjustment = 0.10, -- V fraction added after leaving default.
     scarTurns = 30, -- Credit scar duration in Standard turns.
@@ -89,7 +100,7 @@ WBL_CONFIG = {
     baseReserve = { -- Decision 33 (Leon 2026-11-02).
       enabled = true, -- Formula switch; false leaves the reserve unconfigured (bank suspended).
       capFloorMultiple = 3, -- Cap in U (scaled world-era credit floor) per living major.
-      refillFloorMultiple = 0.15, -- Refill in U per living major per turn, clamped at cap.
+      refillFloorMultiple = 0.12, -- Refill in U per living major per Standard turn, clamped at cap (decision 49: 0.15 -> 0.12).
       openingCashFraction = 1, -- Opening bank cash as a fraction of the first cap.
       fixedCap = false, -- Test/dev injection: a nonnegative gold cap replaces the formula.
       fixedRefill = false, -- Test/dev injection: nonnegative gold per turn replaces the formula.
@@ -106,9 +117,14 @@ WBL_CONFIG = {
     componentOrder = {"FEES", "OVERDUE_INTEREST", "OVERDUE_PRINCIPAL"}, -- Order within a lot; provisional (Claude default).
     missPerPartlyUnpaidInstallment = 1, -- Misses counted per partly unpaid installment; provisional (Claude default).
     missDowngradeFloor = "C", -- Miss downgrades stop at this rating; provisional (Claude default).
-    warningTurns = 7, -- Consecutive arrears Standard turns before warning; WBL_MATH.ArrearsClocks scales (decision 34).
-    defaultTurns = 10, -- Consecutive arrears Standard turns before default; scaled like warningTurns (decision 34).
-    stage2StartTurn = 11, -- Standard default-turn index at which stage 2 begins (stage 1 = this - 1 Standard turns, scaled; decision 34).
+    -- Decision 57: per-loan cumulative arrears turns (never reset) before the warning and default,
+    -- by the loan's origination tier, in Standard turns; WBL_MATH.ArrearsClocks scales them.
+    clockTurns = {
+      DEVELOPED = {warning = 6, default = 10}, -- Leon 2026-11-08.
+      DEVELOPING = {warning = 8, default = 12}, -- Leon 2026-11-08.
+      UNDERDEVELOPED = {warning = 10, default = 14}, -- Leon 2026-11-08.
+    },
+    stage2StartTurn = 11, -- Standard default-turn index at which stage 2 begins (stage 1 = this - 1 Standard turns, scaled; decisions 34 and 57).
   },
   penalties = {
     stage1 = {
@@ -131,7 +147,7 @@ WBL_CONFIG = {
     },
   },
   relief = {
-    restructureFavorCost = 50, -- Favor in the Ancient era, or all available Favor if less; scaled by the effective U over the Ancient U at the same speed (50, 100, 150 ...; Leon 2026-11-05, decision 39).
+    restructureFavorCost = 35, -- Favor in the Ancient era (the full cost is needed, decision 55); scaled by the effective U over the Ancient U at the same speed (35, 70, 105 ...; decision 39; lowered from 50 by decision 60, Leon 2026-11-09).
     restructureTermTurns = 30, -- Replacement loan payment duration in Standard turns.
     debtReliefFraction = 0.50, -- Fraction of eligible debt and arrears forgiven.
     debtReliefTurns = 15, -- Milestone deadline in Standard turns.
@@ -195,12 +211,14 @@ WBL_CONFIG = {
   },
   ai = {
     lowTreasuryGptMultiple = 3, -- Borrow only below this multiple of positive net GPT.
-    loanGptMultiple = 5, -- Requested principal divided by positive net GPT.
+    loanGptMultiple = 5, -- Requested principal divided by positive net GPT, in Standard turns: scaled by game speed (decision 44).
     maxLoans = 2, -- Maximum concurrent AI loans.
+    maxPaymentShare = 0.5, -- Decision 51: total scheduled AI payments per game turn, the new loan included, at most this share of net GPT.
+    minLoanUnits = 0.25, -- Decision 51: skip an AI loan whose fitted principal is under this many U.
     termStandardTurns = 20, -- AI loan term in Standard turns; provisional (Claude default), middle term.
   },
   state = {
-    schema = 1, -- Persisted state schema version.
+    schema = 2, -- Persisted state schema version (2: per-loan arrears clock and boundary GPT, decisions 45 and 57).
     propertyKey = "WBL_STATE", -- Game property key holding the encoded state.
     ledgerRetentionTurns = 10, -- Game turns of individual ledger movements kept; totals kept always. Provisional (Claude default).
     stringCodecWhenUnverified = true, -- WBL_State: when features.statePersistenceVerified is false, true stores the state as a deterministic string instead of a table. On since 2026-11-04: live S10 showed Game properties store table numbers at 32-bit float precision (1000.1 read back as 1000.0999755859375) while the string codec round-tripped exactly.
@@ -224,6 +242,13 @@ WBL_CONFIG = {
   -- WP5 gameplay entry (WBL_Bank): logging switches only, no tuning.
   bank = {
     phaseLogging = true, -- Print one "[WBL PHASE]" line per reducer phase each turn; on for the early dev build.
+    verboseLogging = false, -- Diagnostics only: per-job snapshot, effects, result and state dumps plus summary lines. The MP test build turns it on (tools/build_mp_test.py).
+    dumpChunkSize = 900, -- Characters per "[WBL DUMP]" line; long dumps are split so no single log line gets too long.
+  },
+  -- Bank panel (UI context only).
+  ui = {
+    hotkeyB = true, -- B toggles the panel (Leon, 2026-11-05). The MP test build turns it off: unverified whether it fires while typing in chat.
+    verboseLogging = false, -- Diagnostics only: log every panel open, close, tab, click, request and result. On in the MP test build.
   },
   spikes = {
     goldDelta = 10, -- Gold change in S1 fixture.
@@ -257,6 +282,7 @@ WBL_CONFIG = {
   -- record failure). *Verified flags record evidence status only and never gate an attempt.
   features = {
     attemptAIBorrowing = true, -- Decision 2 rule-based AI loans; human-only fallback if S8 fails.
+    collectAfterIncome = true, -- Decision 41: run the turn job once every living major's PlayerTurnStartComplete has fired (after income), with a fallback at the next OnGameTurnStarted. false = the old trigger (the job at OnGameTurnStarted, before income).
     attemptFavorWrite = true, -- Investor/President Favor grants and restructure/penalty Favor debits.
     attemptEraScoreWrite = true, -- President Era Score grant.
     attemptEnvoyWrite = true, -- President envoy grant.
@@ -276,11 +302,12 @@ WBL_CONFIG = {
     notificationsVerified = true, -- Evidence status; sending is pcall'd and logged regardless. Live 2026-11-04: production loan notification shown with its text.
     statePersistenceVerified = false, -- S10 gate: false selects the string codec fallback.
     recoveryPredicateVerified = false, -- S5 gate: recovery entitlements never registered while false (decisions 15-16).
+    disabledRequests = {}, -- Request kinds refused in gameplay (CAPABILITY_PENDING) and greyed out in the panel. Empty in production; the MP test build lists unfinished ones (tools/build_mp_test.py).
   },
   precision = {
     shareStepTolerance = 0.000000000001, -- Dimensionless machine-boundary tolerance, not a gameplay benefit.
     balanceTolerance = 0.0001, -- Gold/Favor difference treated as equal in expectedBefore checks; provisional (Claude default).
     requestFloatEpsilon = 0.00000011920928955078125, -- 2^-23, a 32-bit float's relative step: UI request numbers arrive in that precision (Session P, 2026-11-04). Quote comparisons only.
-    treasuryResolution = 0.00390625, -- 1/256 gold: the live treasury rounds each change down to this step (Session P, 2026-11-04: -2.18555 applied as -2.1875). Readback tolerance only.
+    treasuryResolution = 0.00390625, -- 1/256 gold: the live treasury rounds each change down to this step (Session P, 2026-11-04: -2.18555 applied as -2.1875). Readback tolerance, and the reducer's dust threshold: smaller gold amounts snap to zero (decision 48).
   },
 }
